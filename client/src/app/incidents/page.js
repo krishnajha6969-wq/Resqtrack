@@ -1,0 +1,318 @@
+'use client';
+
+import { useState } from 'react';
+import Navbar from '@/components/Navbar';
+import { IncidentCard, StatusBadge } from '@/components/Cards';
+
+const INITIAL_INCIDENTS = [
+    { id: '1', title: 'Building Collapse - Near Maxus Mall', latitude: 19.2952, longitude: 72.8544, severity: 'critical', description: 'Old building near Maxus Mall collapsed during heavy rain. Multiple casualties reported. First responders on scene. Need additional rescue teams with heavy equipment.', incident_type: 'structural', status: 'in_progress', assigned_team_name: 'Bravo Medical', reporter_name: 'Mira Road Fire Station', created_at: new Date(Date.now() - 3600000).toISOString(), updated_at: new Date(Date.now() - 1800000).toISOString() },
+    { id: '2', title: 'Flood Water Rising - Uttan Beach', latitude: 19.2820, longitude: 72.7920, severity: 'high', description: 'High tide causing water logging in low-lying coastal areas of Uttan. Over 200 residents need immediate evacuation. Boats requested.', incident_type: 'flood', status: 'reported', assigned_team_name: null, reporter_name: 'Bhayander West Ward', created_at: new Date(Date.now() - 1800000).toISOString(), updated_at: new Date(Date.now() - 1800000).toISOString() },
+    { id: '3', title: 'Road Blocked - WEH Mira Road', latitude: 19.2815, longitude: 72.8680, severity: 'medium', description: 'Tree fell blocking the Western Express Highway near Mira Road station. Both lanes blocked. Alternate routes via Kashimira are congested.', incident_type: 'blockage', status: 'reported', assigned_team_name: null, reporter_name: 'Traffic Police - Mira Road', created_at: new Date(Date.now() - 900000).toISOString(), updated_at: new Date(Date.now() - 900000).toISOString() },
+    { id: '4', title: 'Medical Emergency - GCC Club', latitude: 19.2680, longitude: 72.8590, severity: 'high', description: 'Multiple heatstrokes reported at relief camp near GCC Club, Mira Road. Medical supplies running low. Need ambulance support.', incident_type: 'medical', status: 'in_progress', assigned_team_name: 'Mira Road Ambulance', reporter_name: 'Camp Manager', created_at: new Date(Date.now() - 600000).toISOString(), updated_at: new Date(Date.now() - 300000).toISOString() },
+    { id: '5', title: 'Gas Leak - Kashimira Industrial Area', latitude: 19.3025, longitude: 72.8420, severity: 'critical', description: 'Chemical plant in Kashimira reporting hazardous gas leak. 500m evacuation zone established. HAZMAT team requested urgently.', incident_type: 'hazmat', status: 'reported', assigned_team_name: null, reporter_name: 'Plant Security - Kashimira', created_at: new Date(Date.now() - 300000).toISOString(), updated_at: new Date(Date.now() - 300000).toISOString() },
+    { id: '6', title: 'Trapped Survivors - Bhayander Station', latitude: 19.3042, longitude: 72.8510, severity: 'critical', description: 'Portion of Bhayander railway station foot overbridge collapsed. Signals from trapped survivors detected. Need specialized rescue equipment.', incident_type: 'structural', status: 'reported', assigned_team_name: null, reporter_name: 'Railway Police Bhayander', created_at: new Date(Date.now() - 120000).toISOString(), updated_at: new Date(Date.now() - 120000).toISOString() },
+];
+
+export default function IncidentsPage() {
+    const [incidents, setIncidents] = useState(INITIAL_INCIDENTS);
+    const [filter, setFilter] = useState({ status: '', severity: '' });
+    const [showCreate, setShowCreate] = useState(false);
+    const [selectedIncident, setSelectedIncident] = useState(null);
+    const [newIncident, setNewIncident] = useState({
+        title: '', description: '', severity: 'medium', incident_type: 'general',
+        latitude: '', longitude: '',
+    });
+
+    const filteredIncidents = incidents.filter(i => {
+        if (filter.status && i.status !== filter.status) return false;
+        if (filter.severity && i.severity !== filter.severity) return false;
+        return true;
+    });
+
+    const handleCreate = (e) => {
+        e.preventDefault();
+        const incident = {
+            ...newIncident,
+            id: Date.now().toString(),
+            status: 'reported',
+            assigned_team_name: null,
+            reporter_name: 'You',
+            latitude: parseFloat(newIncident.latitude) || 19.290 + Math.random() * 0.02,
+            longitude: parseFloat(newIncident.longitude) || 72.850 + Math.random() * 0.02,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+        };
+        setIncidents([incident, ...incidents]);
+        setShowCreate(false);
+        setNewIncident({ title: '', description: '', severity: 'medium', incident_type: 'general', latitude: '', longitude: '' });
+    };
+
+    const handleStatusChange = (id, newStatus) => {
+        setIncidents(prev => prev.map(i =>
+            i.id === id ? { ...i, status: newStatus, updated_at: new Date().toISOString() } : i
+        ));
+        if (selectedIncident?.id === id) {
+            setSelectedIncident(prev => ({ ...prev, status: newStatus }));
+        }
+    };
+
+    const severityCounts = {
+        critical: incidents.filter(i => i.severity === 'critical').length,
+        high: incidents.filter(i => i.severity === 'high').length,
+        medium: incidents.filter(i => i.severity === 'medium').length,
+        low: incidents.filter(i => i.severity === 'low').length,
+    };
+
+    return (
+        <div className="min-h-screen bg-slate-950">
+            <Navbar />
+
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                {/* Header */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+                    <div>
+                        <h1 className="text-3xl font-black text-white tracking-tight">Incident Management</h1>
+                        <p className="text-base text-slate-400 mt-2">{incidents.length} total incidents • {incidents.filter(i => i.status === 'reported').length} awaiting response</p>
+                    </div>
+                    <button
+                        onClick={() => setShowCreate(true)}
+                        className="px-6 py-3 bg-red-600 hover:bg-red-500 text-white text-sm font-bold uppercase tracking-wider rounded-xl shadow-lg shadow-red-600/15 transition-all flex items-center gap-2 active:scale-95"
+                    >
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                        </svg>
+                        Report Incident
+                    </button>
+                </div>
+
+                {/* Summary Cards */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+                    {Object.entries(severityCounts).map(([sev, count]) => {
+                        const colors = {
+                            critical: 'from-red-600/20 to-red-900/10 border-red-500/20',
+                            high: 'from-orange-600/20 to-orange-900/10 border-orange-500/20',
+                            medium: 'from-yellow-600/20 to-yellow-900/10 border-yellow-500/20',
+                            low: 'from-green-600/20 to-green-900/10 border-green-500/20',
+                        };
+                        return (
+                            <div key={sev} className={`bg-gradient-to-br ${colors[sev]} p-5 rounded-2xl border`}>
+                                <p className="text-3xl font-black text-white">{count}</p>
+                                <p className="text-sm text-slate-400 capitalize mt-1 font-medium">{sev} Severity</p>
+                            </div>
+                        );
+                    })}
+                </div>
+
+                {/* Filters */}
+                <div className="flex flex-wrap gap-3 mb-8">
+                    <select
+                        value={filter.status}
+                        onChange={(e) => setFilter({ ...filter, status: e.target.value })}
+                        className="px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-base text-white font-medium"
+                    >
+                        <option value="">All Statuses</option>
+                        <option value="reported">Reported</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="resolved">Resolved</option>
+                    </select>
+                    <select
+                        value={filter.severity}
+                        onChange={(e) => setFilter({ ...filter, severity: e.target.value })}
+                        className="px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-base text-white font-medium"
+                    >
+                        <option value="">All Severities</option>
+                        <option value="critical">Critical</option>
+                        <option value="high">High</option>
+                        <option value="medium">Medium</option>
+                        <option value="low">Low</option>
+                    </select>
+                </div>
+
+                {/* Incident Table / List */}
+                <div className="grid lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2 space-y-4">
+                        {filteredIncidents.map(incident => (
+                            <div
+                                key={incident.id}
+                                onClick={() => setSelectedIncident(incident)}
+                                className={`cursor-pointer transition-all ${selectedIncident?.id === incident.id ? 'ring-2 ring-red-500/50 rounded-2xl' : ''}`}
+                            >
+                                <IncidentCard incident={incident} />
+                            </div>
+                        ))}
+                        {filteredIncidents.length === 0 && (
+                            <div className="text-center py-16 text-slate-500 text-lg">No incidents match the selected filters.</div>
+                        )}
+                    </div>
+
+                    {/* Detail Panel */}
+                    <div className="bg-slate-900/80 rounded-2xl border border-slate-700/50 p-6 h-fit sticky top-24">
+                        {selectedIncident ? (
+                            <>
+                                <div className="flex items-start justify-between gap-3 mb-5">
+                                    <h2 className="text-xl font-black text-white">{selectedIncident.title}</h2>
+                                    <StatusBadge status={selectedIncident.severity} size="md" />
+                                </div>
+                                <p className="text-base text-slate-400 mb-5 leading-relaxed">{selectedIncident.description}</p>
+
+                                <div className="space-y-4 text-base">
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-500 font-medium">Status</span>
+                                        <StatusBadge status={selectedIncident.status} size="sm" />
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-500 font-medium">Type</span>
+                                        <span className="text-slate-300 capitalize font-medium">{selectedIncident.incident_type}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-500 font-medium">Assigned</span>
+                                        <span className="text-slate-300 font-medium">{selectedIncident.assigned_team_name || 'Unassigned'}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-500 font-medium">Reported by</span>
+                                        <span className="text-slate-300 font-medium">{selectedIncident.reporter_name}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-500 font-medium">Location</span>
+                                        <span className="text-slate-300 font-mono text-sm">{selectedIncident.latitude?.toFixed(4)}, {selectedIncident.longitude?.toFixed(4)}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-500 font-medium">Reported</span>
+                                        <span className="text-slate-300 font-medium">{new Date(selectedIncident.created_at).toLocaleString()}</span>
+                                    </div>
+                                </div>
+
+                                <div className="mt-6 pt-5 border-t border-slate-700/50 space-y-3">
+                                    <p className="text-sm text-slate-500 font-bold uppercase tracking-wider mb-3">Update Status</p>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {['reported', 'in_progress', 'resolved', 'closed'].map(st => (
+                                            <button
+                                                key={st}
+                                                onClick={() => handleStatusChange(selectedIncident.id, st)}
+                                                disabled={selectedIncident.status === st}
+                                                className={`px-4 py-3 text-sm font-bold rounded-xl capitalize transition-all ${selectedIncident.status === st
+                                                        ? 'bg-red-600/20 text-red-400 border border-red-500/30'
+                                                        : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white border border-slate-700 active:scale-95'
+                                                    }`}
+                                            >
+                                                {st.replace('_', ' ')}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </>
+                        ) : (
+                            <div className="text-center py-16">
+                                <svg className="w-12 h-12 mx-auto text-slate-700 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.042 21.672L13.684 16.6m0 0l-2.51 2.225.569-9.47 5.227 7.917-3.286-.672zM12 2.25V4.5m5.834.166l-1.591 1.591M20.25 10.5H18M7.757 14.743l-1.59 1.59M6 10.5H3.75m4.007-4.243l-1.59-1.59" />
+                                </svg>
+                                <p className="text-slate-500 text-lg font-medium">Select an incident to view details</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* Create Incident Modal */}
+            {showCreate && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                    <div className="bg-slate-900 border border-slate-700 rounded-2xl p-8 w-full max-w-lg shadow-2xl">
+                        <h3 className="text-2xl font-black text-white mb-6">Report New Incident</h3>
+                        <form onSubmit={handleCreate} className="space-y-5">
+                            <div>
+                                <label className="block text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Title</label>
+                                <input
+                                    type="text"
+                                    value={newIncident.title}
+                                    onChange={(e) => setNewIncident({ ...newIncident, title: e.target.value })}
+                                    className="w-full px-5 py-3.5 bg-slate-800 border border-slate-600 rounded-xl text-white text-base focus:outline-none focus:border-red-500/50"
+                                    placeholder="Brief incident title"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Description</label>
+                                <textarea
+                                    value={newIncident.description}
+                                    onChange={(e) => setNewIncident({ ...newIncident, description: e.target.value })}
+                                    className="w-full px-5 py-3.5 bg-slate-800 border border-slate-600 rounded-xl text-white text-base focus:outline-none focus:border-red-500/50 h-28 resize-none"
+                                    placeholder="Detailed description of the incident..."
+                                    required
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Severity</label>
+                                    <select
+                                        value={newIncident.severity}
+                                        onChange={(e) => setNewIncident({ ...newIncident, severity: e.target.value })}
+                                        className="w-full px-4 py-3.5 bg-slate-800 border border-slate-600 rounded-xl text-white text-base"
+                                    >
+                                        <option value="low">Low</option>
+                                        <option value="medium">Medium</option>
+                                        <option value="high">High</option>
+                                        <option value="critical">Critical</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Type</label>
+                                    <select
+                                        value={newIncident.incident_type}
+                                        onChange={(e) => setNewIncident({ ...newIncident, incident_type: e.target.value })}
+                                        className="w-full px-4 py-3.5 bg-slate-800 border border-slate-600 rounded-xl text-white text-base"
+                                    >
+                                        <option value="general">General</option>
+                                        <option value="structural">Structural</option>
+                                        <option value="flood">Flood</option>
+                                        <option value="medical">Medical</option>
+                                        <option value="blockage">Road Blockage</option>
+                                        <option value="hazmat">Hazmat</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Latitude</label>
+                                    <input
+                                        type="number"
+                                        step="any"
+                                        value={newIncident.latitude}
+                                        onChange={(e) => setNewIncident({ ...newIncident, latitude: e.target.value })}
+                                        className="w-full px-4 py-3.5 bg-slate-800 border border-slate-600 rounded-xl text-white text-base"
+                                        placeholder="19.2900"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Longitude</label>
+                                    <input
+                                        type="number"
+                                        step="any"
+                                        value={newIncident.longitude}
+                                        onChange={(e) => setNewIncident({ ...newIncident, longitude: e.target.value })}
+                                        className="w-full px-4 py-3.5 bg-slate-800 border border-slate-600 rounded-xl text-white text-base"
+                                        placeholder="72.8500"
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex gap-3 pt-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowCreate(false)}
+                                    className="flex-1 py-3.5 text-base font-bold text-slate-400 bg-slate-800 rounded-xl hover:bg-slate-700 transition-colors active:scale-95"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="flex-1 py-3.5 text-base font-bold text-white bg-red-600 hover:bg-red-500 rounded-xl transition-colors active:scale-95 shadow-lg shadow-red-600/20"
+                                >
+                                    Report Incident
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
