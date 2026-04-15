@@ -5,11 +5,24 @@ const { pool } = require('../config/db');
 // GET all teams
 router.get('/', async (req, res) => {
     try {
-        const result = await pool.query('SELECT * FROM teams');
+        const result = await pool.query(`
+            SELECT 
+                id,
+                vehicle_id,
+                name,
+                lat,
+                lng,
+                status
+            FROM teams
+        `);
+
         res.json(result.rows);
     } catch (err) {
-        console.error('Error fetching teams:', err);
-        res.status(500).json({ error: 'Failed to retrieve teams', details: err.message });
+        console.error("🔥 DB ERROR:", err); // IMPORTANT
+        res.status(500).json({
+            error: "Failed to retrieve teams",
+            details: err.message
+        });
     }
 });
 
