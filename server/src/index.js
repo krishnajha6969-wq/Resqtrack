@@ -19,30 +19,32 @@ const { setupWebSocket } = require('./websocket/handler');
 const app = express();
 const server = http.createServer(app);
 
-// Initialize Socket.io
+// ✅ FIXED CORS (IMPORTANT FOR DEPLOYMENT)
 const io = new Server(server, {
     cors: {
-        origin: process.env.CLIENT_URL || 'http://localhost:3000',
-        methods: ['GET', 'POST', 'PUT', 'DELETE'],
+        origin: process.env.CLIENT_URL || "*",
+        methods: ["GET", "POST", "PUT", "DELETE"],
         credentials: true,
     },
 });
 
-// Store io instance for route access
 app.set('io', io);
 
 // ============================================
 // MIDDLEWARE
 // ============================================
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+
+// ✅ FIXED CORS HERE ALSO
 app.use(cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:3000',
+    origin: process.env.CLIENT_URL || "*",
     credentials: true,
 }));
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Request logging
+// Logging
 app.use((req, res, next) => {
     console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
     next();
@@ -53,7 +55,7 @@ app.use((req, res, next) => {
 // ============================================
 app.use('/api', authRoutes);
 app.use('/api/teams', teamRoutes);
-app.use('/api/team', teamRoutes); // alias for /api/team/location
+app.use('/api/team', teamRoutes);
 app.use('/api/incidents', incidentRoutes);
 app.use('/api/congestion', congestionRoutes);
 app.use('/api/routes', routeRoutes);
@@ -68,7 +70,7 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// 404 handler
+// 404
 app.use((req, res) => {
     res.status(404).json({ error: 'Endpoint not found' });
 });
@@ -79,9 +81,7 @@ app.use((err, req, res, next) => {
     res.status(500).json({ error: 'Internal server error' });
 });
 
-// ============================================
-// WEBSOCKET
-// ============================================
+// WebSocket
 setupWebSocket(io);
 
 // ============================================
@@ -90,15 +90,7 @@ setupWebSocket(io);
 const PORT = process.env.PORT || 5000;
 
 server.listen(PORT, () => {
-    console.log(`
-  ╔══════════════════════════════════════╗
-  ║       ResQTrack API Server           ║
-  ║                                      ║
-  ║   HTTP:  http://localhost:${PORT}       ║
-  ║   WS:    ws://localhost:${PORT}         ║
-  ║   Mode:  ${process.env.NODE_ENV || 'development'}            ║
-  ╚══════════════════════════════════════╝
-  `);
+    console.log(`Server running on port ${PORT}`);
 });
 
 module.exports = { app, server, io };
