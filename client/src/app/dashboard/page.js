@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import { IncidentCard, TeamCard, StatusBadge } from '@/components/Cards';
 
@@ -32,6 +33,8 @@ const DEMO_CONGESTION = [
 ];
 
 export default function DashboardPage() {
+    const router = useRouter();
+    const [isAuthorized, setIsAuthorized] = useState(false);
     const [teams, setTeams] = useState(DEMO_TEAMS);
     const [incidents, setIncidents] = useState(DEMO_INCIDENTS);
     const [congestion, setCongestion] = useState(DEMO_CONGESTION);
@@ -39,8 +42,22 @@ export default function DashboardPage() {
     const [selectedTeam, setSelectedTeam] = useState(null);
     const [showAssignModal, setShowAssignModal] = useState(null);
 
+    // Initial Auth Check
+    useEffect(() => {
+        const token = localStorage.getItem('resqtrack_token');
+        const user = localStorage.getItem('resqtrack_user');
+        
+        // For testing we will just check if user exists. Since they have a mock user, they are allowed in.
+        if (!user) {
+            router.push('/login');
+        } else {
+            setIsAuthorized(true);
+        }
+    }, [router]);
+
     // Simulate real-time movement
     useEffect(() => {
+        if (!isAuthorized) return;
         const interval = setInterval(() => {
             setTeams(prev => prev.map(t => ({
                 ...t,
@@ -76,6 +93,15 @@ export default function DashboardPage() {
         active: incidents.filter(i => i.status !== 'resolved' && i.status !== 'closed').length,
         unassigned: incidents.filter(i => !i.assigned_team_name).length,
     };
+
+    if (!isAuthorized) {
+        return (
+            <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center">
+                <div className="w-12 h-12 border-4 border-slate-800 border-t-red-500 rounded-full animate-spin"></div>
+                <p className="text-slate-500 mt-4 font-mono text-sm tracking-widest uppercase">Verifying Clearances...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-slate-950 flex flex-col">
