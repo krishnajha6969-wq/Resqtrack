@@ -2,11 +2,11 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/db');
 
-// GET all teams
+// GET all teams (NO USERS TABLE)
 router.get('/', async (req, res) => {
     try {
         const result = await pool.query(`
-            SELECT 
+            SELECT
                 id,
                 vehicle_id,
                 name,
@@ -18,7 +18,7 @@ router.get('/', async (req, res) => {
 
         res.json(result.rows);
     } catch (err) {
-        console.error("🔥 DB ERROR:", err); // IMPORTANT
+        console.error("🔥 DB ERROR:", err);
         res.status(500).json({
             error: "Failed to retrieve teams",
             details: err.message
