@@ -9,14 +9,21 @@ router.get('/', async (req, res) => {
             SELECT
                 id,
                 vehicle_id,
-                name,
-                lat,
-                lng,
+                team_name,
+                latitude,
+                longitude,
                 status
             FROM teams
         `);
 
-        res.json(result.rows);
+        // Add `lat` and `lng` aliases exactly as expected by your frontend map
+        const mappedTeams = result.rows.map(team => ({
+            ...team,
+            lat: team.latitude,
+            lng: team.longitude
+        }));
+        
+        res.json(mappedTeams);
     } catch (err) {
         console.error("🔥 DB ERROR:", err);
         res.status(500).json({
