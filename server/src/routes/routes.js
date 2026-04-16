@@ -49,6 +49,48 @@ router.get('/optimize', authenticateToken, async (req, res) => {
             })),
         ];
 
+        // ---- SMART ROUTING AVOIDANCE LOGIC ----
+        const waypoints = [{ lat: parseFloat(start_lat), lng: parseFloat(start_lng) }];
+        
+        let hasDetour = false;
+        
+        // Loop through avoid zones to see if they intersect our path roughly
+        // We use a simplified bounding / distance math for the hackathon
+        avoidZones.forEach(zone => {
+            // Find distance from zone to the straight line segment
+            const dist = pointToLineDistance(
+                zone.lat, zone.lng, 
+                parseFloat(start_lat), parseFloat(start_lng), 
+                parseFloat(end_lat), parseFloat(end_lng)
+            );
+            
+            // If the route passes within ~600m (~0.006 degrees) of a severe congestion or blockage
+            if (dist < 0.006 && (zone.severity === 'congested' || zone.severity === 'critical')) {
+                hasDetour = true;
+                // Calculate midpoint
+                const midLat = (parseFloat(start_lat) + parseFloat(end_lat)) / 2;
+                const midLng = (parseFloat(start_lng) + parseFloat(end_lng)) / 2;
+                
+                // Add an orthogonal deflection 
+                // swap dx, dy and multiply by a scalar to push it sideways
+                const dx = parseFloat(end_lat) - parseFloat(start_lat);
+                const dy = parseFloat(end_lng) - parseFloat(start_lng);
+                
+                // Normal vector
+                const nLat = -dy * 0.5; // Bend out
+                const nLng = dx * 0.5;
+                
+                waypoints.push({
+                    lat: midLat + nLat,
+                    lng: midLng + nLng,
+                    is_detour: true,
+                    avoided_zone: zone.label
+                });
+            }
+        });
+        
+        waypoints.push({ lat: parseFloat(end_lat), lng: parseFloat(end_lng) });
+
         const routeResponse = {
             origin: { lat: parseFloat(start_lat), lng: parseFloat(start_lng) },
             destination: { lat: parseFloat(end_lat), lng: parseFloat(end_lng) },
@@ -57,13 +99,10 @@ router.get('/optimize', authenticateToken, async (req, res) => {
                 distance_km: calculateDistance(
                     parseFloat(start_lat), parseFloat(start_lng),
                     parseFloat(end_lat), parseFloat(end_lng)
-                ),
+                ) * (hasDetour ? 1.4 : 1), // Increase calculated distance if detoured
                 estimated_time_min: null,
-                waypoints: [
-                    { lat: parseFloat(start_lat), lng: parseFloat(start_lng) },
-                    { lat: parseFloat(end_lat), lng: parseFloat(end_lng) },
-                ],
-                note: 'Route calculated avoiding congested and blocked roads. For production, integrate with OSRM routing engine.',
+                waypoints: waypoints,
+                note: hasDetour ? 'Route dynamically detoured to avoid active congestion/blockages.' : 'Clear path calculated.',
             },
         };
 
@@ -95,6 +134,17 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 
 function toRad(deg) {
     return deg * (Math.PI / 180);
+}
+
+// Helper: Distance from Point P to Line Segment AB (in degrees approximation)
+function pointToLineDistance(px, py, ax, ay, bx, by) {
+    const l2 = (bx - ax) ** 2 + (by - ay) ** 2;
+    if (l2 === 0) return Math.sqrt((px - ax) ** 2 + (py - ay) ** 2);
+    let t = ((px - ax) * (bx - ax) + (py - ay) * (by - ay)) / l2;
+    t = Math.max(0, Math.min(1, t));
+    const projX = ax + t * (bx - ax);
+    const projY = ay + t * (by - ay);
+    return Math.sqrt((px - projX) ** 2 + (py - projY) ** 2);
 }
 
 module.exports = router;

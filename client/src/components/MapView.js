@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-export default function MapView({ teams = [], incidents = [], congestion = [] }) {
+export default function MapView({ teams = [], incidents = [], congestion = [], route = [] }) {
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
   const markersRef = useRef([]);
@@ -144,7 +144,50 @@ export default function MapView({ teams = [], incidents = [], congestion = [] })
       markersRef.current.push(heatCircle);
     });
 
-  }, [teams, incidents, congestion]);
+    // 🟢 Draw Smart Routing Path
+    if (route && route.length > 1) {
+      const latlngs = route.map(wp => [wp.lat, wp.lng]);
+      
+      // Draw outer glow
+      const glowLine = L.polyline(latlngs, {
+        color: '#06b6d4', // Cyan
+        weight: 8,
+        opacity: 0.3,
+        lineCap: 'round',
+        lineJoin: 'round'
+      }).addTo(map);
+      
+      // Draw inner core
+      const coreLine = L.polyline(latlngs, {
+        color: '#22d3ee', // Bright Cyan
+        weight: 4,
+        opacity: 0.9,
+        dashArray: '10, 10',
+        className: 'route-path-animation',
+        lineCap: 'round',
+        lineJoin: 'round'
+      }).addTo(map);
+
+      markersRef.current.push(glowLine);
+      markersRef.current.push(coreLine);
+      
+      // Add detour markers if any
+      route.forEach(wp => {
+        if (wp.is_detour) {
+           const detourIcon = L.divIcon({
+              className: 'detour-marker',
+              html: `<div style="width: 12px; height: 12px; background: #06b6d4; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 10px #06b6d4;"></div>`,
+              iconSize: [12, 12],
+              iconAnchor: [6, 6]
+           });
+           const dm = L.marker([wp.lat, wp.lng], { icon: detourIcon }).addTo(map);
+           dm.bindPopup(`<strong>Smart Detour</strong><br/>Avoiding: ${wp.avoided_zone}`);
+           markersRef.current.push(dm);
+        }
+      });
+    }
+
+  }, [teams, incidents, congestion, route]);
 
   return (
     <div

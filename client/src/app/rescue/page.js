@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import Navbar from '@/components/Navbar';
 import { StatusBadge } from '@/components/Cards';
 import { sendLocationUpdate } from '@/lib/socket';
+import api from '@/lib/api';
 
 const MapView = dynamic(() => import('@/components/MapView'), { ssr: false });
 
@@ -29,6 +30,33 @@ export default function RescuePage() {
     const [showReportModal, setShowReportModal] = useState(false);
     const [isOnline, setIsOnline] = useState(true);
     const [reportForm, setReportForm] = useState({ title: '', description: '', severity: 'medium', type: 'general' });
+    const [route, setRoute] = useState([]);
+    const [congestion, setCongestion] = useState([]);
+
+    // 🟢 Fetch Smart Route and Congestion Data
+    useEffect(() => {
+        async function loadNavData() {
+            try {
+                // Get active congestion heatmaps
+                const conData = await api.getCongestion();
+                setCongestion(conData);
+                
+                if (mission) {
+                    // Get smart route avoiding congestion
+                    const res = await api.getOptimizedRoute(
+                        position.lat, position.lng,
+                        mission.incident.latitude, mission.incident.longitude
+                    );
+                    if (res && res.recommended_route) {
+                        setRoute(res.recommended_route.waypoints);
+                    }
+                }
+            } catch (err) {
+                console.error("Navigation load failed:", err);
+            }
+        }
+        loadNavData();
+    }, [mission]);
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -85,6 +113,8 @@ export default function RescuePage() {
                     <MapView
                         teams={teamMarker}
                         incidents={incidentMarker}
+                        congestion={congestion}
+                        route={route}
                         center={[position.lat, position.lng]}
                         zoom={15}
                         height="100%"
