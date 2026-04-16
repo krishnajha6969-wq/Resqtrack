@@ -8,36 +8,14 @@ import { IncidentCard, TeamCard, StatusBadge } from '@/components/Cards';
 
 const MapView = dynamic(() => import('@/components/MapView'), { ssr: false });
 
-// Demo data for standalone operation
-const DEMO_TEAMS = [
-    { id: '1', vehicle_id: 'RV-001', team_name: 'Mira-East Rescue', latitude: 19.2820, longitude: 72.8550, status: 'available', incident_title: null },
-    { id: '2', vehicle_id: 'RV-002', team_name: 'Bhayander-West Medical', latitude: 19.3100, longitude: 72.8530, status: 'responding', incident_title: 'Building Collapse - Near Maxus' },
-    { id: '3', vehicle_id: 'AMB-001', team_name: 'Mira Road Ambulance', latitude: 19.2800, longitude: 72.8700, status: 'busy', incident_title: 'Medical Emergency' },
-    { id: '4', vehicle_id: 'RV-003', team_name: 'Golden Nest Relief', latitude: 19.2950, longitude: 72.8600, status: 'available', incident_title: null },
-    { id: '5', vehicle_id: 'AMB-002', team_name: 'GCC Medical Unit', latitude: 19.2800, longitude: 72.8750, status: 'available', incident_title: null },
-    { id: '6', vehicle_id: 'RV-004', team_name: 'Uttan Coastal SAR', latitude: 19.3150, longitude: 72.8100, status: 'responding', incident_title: 'Flood Water Rising' },
-];
-
-const DEMO_INCIDENTS = [
-    { id: '1', title: 'Building Collapse - Near Maxus', latitude: 19.3100, longitude: 72.8440, severity: 'critical', description: 'Old building near Maxus Mall collapsed. Multiple casualties reported.', status: 'in_progress', assigned_team_name: 'Bhayander-West Medical', created_at: new Date(Date.now() - 3600000).toISOString() },
-    { id: '2', title: 'Flood Water Rising - Uttan', latitude: 19.3200, longitude: 72.8050, severity: 'high', description: 'High tide causing water logging in low-lying coastal areas of Uttan.', status: 'reported', assigned_team_name: null, created_at: new Date(Date.now() - 1800000).toISOString() },
-    { id: '3', title: 'Road Blocked - WEH Mira Road', latitude: 19.2900, longitude: 72.8710, severity: 'medium', description: 'Tree fell blocking the Western Express Highway.', status: 'reported', assigned_team_name: null, created_at: new Date(Date.now() - 900000).toISOString() },
-    { id: '4', title: 'Medical Emergency - GCC Club', latitude: 19.2800, longitude: 72.8750, severity: 'high', description: 'Multiple heatstrokes reported at relief camp.', status: 'in_progress', assigned_team_name: 'Mira Road Ambulance', created_at: new Date(Date.now() - 600000).toISOString() },
-    { id: '5', title: 'Gas Leak - Kashimira', latitude: 19.2850, longitude: 72.8800, severity: 'critical', description: 'Gas leak reported near Kashimira intersection.', status: 'reported', assigned_team_name: null, created_at: new Date(Date.now() - 300000).toISOString() },
-];
-
-const DEMO_CONGESTION = [
-    { id: '1', road_segment: 'WEH - Fountain Hotel', latitude: 19.2920, longitude: 72.8750, vehicle_density: 8, average_speed: 5.2, status: 'congested' },
-    { id: '2', road_segment: 'Mira Road Station Rd', latitude: 19.2820, longitude: 72.8550, vehicle_density: 4, average_speed: 18.5, status: 'moderate' },
-    { id: '3', road_segment: 'Bhayander Phatak', latitude: 19.3050, longitude: 72.8580, vehicle_density: 6, average_speed: 8.1, status: 'congested' },
-];
+import api from '@/lib/api';
 
 export default function DashboardPage() {
     const router = useRouter();
     const [isAuthorized, setIsAuthorized] = useState(false);
-    const [teams, setTeams] = useState(DEMO_TEAMS);
-    const [incidents, setIncidents] = useState(DEMO_INCIDENTS);
-    const [congestion, setCongestion] = useState(DEMO_CONGESTION);
+    const [teams, setTeams] = useState([]);
+    const [incidents, setIncidents] = useState([]);
+    const [congestion, setCongestion] = useState([]);
     const [activePanel, setActivePanel] = useState('incidents');
     const [selectedTeam, setSelectedTeam] = useState(null);
     const [showAssignModal, setShowAssignModal] = useState(null);
@@ -55,30 +33,47 @@ export default function DashboardPage() {
         }
     }, [router]);
 
-    // Simulate real-time movement
+    // Fetch Real Data From NeonDB
     useEffect(() => {
         if (!isAuthorized) return;
-        const interval = setInterval(() => {
-            setTeams(prev => prev.map(t => ({
-                ...t,
-                latitude: t.latitude + (Math.random() - 0.5) * 0.001,
-                longitude: t.longitude + (Math.random() - 0.5) * 0.001,
-            })));
-        }, 3000);
-        return () => clearInterval(interval);
-    }, []);
+        
+        async function loadDashboardData() {
+            try {
+                const fetchedTeams = await api.getTeams();
+                const fetchedIncidents = await api.getIncidents();
+                const fetchedCongestion = await api.getCongestion();
+                
+                setTeams(fetchedTeams);
+                setIncidents(fetchedIncidents);
+                setCongestion(fetchedCongestion);
+            } catch (err) {
+                console.error("Failed to load live data:", err);
+            }
+        }
+        
+        loadDashboardData();
+    }, [isAuthorized]);
 
     const handleAssign = (incident) => {
         setShowAssignModal(incident);
     };
 
-    const confirmAssign = (incidentId, teamId) => {
-        setIncidents(prev => prev.map(i =>
-            i.id === incidentId ? { ...i, status: 'in_progress', assigned_team_name: teams.find(t => t.id === teamId)?.team_name } : i
-        ));
-        setTeams(prev => prev.map(t =>
-            t.id === teamId ? { ...t, status: 'responding' } : t
-        ));
+    const confirmAssign = async (incidentId, teamId) => {
+        try {
+            // Push actual assignment to backend
+            await api.assignIncident(incidentId, teamId);
+            
+            // Re-sync local state instantly for UI
+            setIncidents(prev => prev.map(i =>
+                i.id === incidentId ? { ...i, status: 'in_progress', assigned_team_name: teams.find(t => t.id === teamId)?.team_name } : i
+            ));
+            setTeams(prev => prev.map(t =>
+                t.id === teamId ? { ...t, status: 'responding' } : t
+            ));
+        } catch (err) {
+            console.error("Assignment failed:", err);
+            alert("Could not assign team to incident. Check database connection.");
+        }
         setShowAssignModal(null);
     };
 
