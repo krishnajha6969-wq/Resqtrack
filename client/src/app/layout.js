@@ -1,6 +1,9 @@
 import { Outfit } from "next/font/google";
 import "./globals.css";
 
+// ✅ ADD THIS LINE (IMPORTANT)
+import "leaflet/dist/leaflet.css";
+
 const outfit = Outfit({
   variable: "--font-outfit",
   subsets: ["latin"],
@@ -9,8 +12,10 @@ const outfit = Outfit({
 
 export const metadata = {
   title: "ResQTrack — Smart Disaster Response Coordination",
-  description: "Real-time disaster response coordination platform with live tracking, congestion-aware routing, offline-first architecture, and command center dashboards.",
-  keywords: "disaster response, rescue coordination, emergency management, real-time tracking",
+  description:
+    "Real-time disaster response coordination platform with live tracking, congestion-aware routing, offline-first architecture, and command center dashboards.",
+  keywords:
+    "disaster response, rescue coordination, emergency management, real-time tracking",
 };
 
 export default function RootLayout({ children }) {
@@ -19,7 +24,9 @@ export default function RootLayout({ children }) {
       <head>
         <link rel="icon" href="/favicon.ico" />
       </head>
-      <body className={`${outfit.variable} font-sans antialiased bg-slate-950 text-white`}>
+      <body
+        className={`${outfit.variable} font-sans antialiased bg-slate-950 text-white`}
+      >
         {children}
       </body>
     </html>

@@ -1,4 +1,4 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_BASE = "https://resqtrack-backend-cb04.onrender.com";
 
 /**
  * API client with JWT authentication

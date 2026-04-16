@@ -6,10 +6,7 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
-    "build": "echo Build step not required"
-  },
-  "engines": {
-    "node": ">=18"
+    "init-db": "node initDb.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
