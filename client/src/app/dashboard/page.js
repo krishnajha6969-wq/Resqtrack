@@ -9,6 +9,7 @@ import { IncidentCard, TeamCard, StatusBadge } from '@/components/Cards';
 const MapView = dynamic(() => import('@/components/MapView'), { ssr: false });
 
 import api from '@/lib/api';
+import { getSocket, joinRole, disconnectSocket } from '@/lib/socket';
 
 export default function DashboardPage() {
     const router = useRouter();
@@ -52,6 +53,36 @@ export default function DashboardPage() {
         }
         
         loadDashboardData();
+        
+        // 🟢 INITIALIZE WEBSOCKET FOR COMMAND DASHBOARD
+        const socket = getSocket();
+        
+        // Join the exclusive command center room for broad admin broadcasts
+        joinRole('command_center');
+        
+        // Listen for live vehicle tracking pulses
+        const handleLocationUpdate = (update) => {
+            setTeams((prevTeams) => 
+                prevTeams.map((team) => {
+                    if (team.id === update.team_id || team.vehicle_id === update.team_id) {
+                        return {
+                            ...team,
+                            lat: update.latitude,
+                            lng: update.longitude,
+                            latitude: update.latitude,     // Override database lat
+                            longitude: update.longitude,   // Override database lng
+                        };
+                    }
+                    return team;
+                })
+            );
+        };
+
+        socket.on('team:location', handleLocationUpdate);
+        
+        return () => {
+            socket.off('team:location', handleLocationUpdate);
+        };
     }, [isAuthorized]);
 
     const handleAssign = (incident) => {
