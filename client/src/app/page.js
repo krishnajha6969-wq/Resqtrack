@@ -1,67 +1,52 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import api from "../lib/api";
-import dynamic from "next/dynamic";
-import { getSocket, joinRole, disconnectSocket } from "../lib/socket";
-
-const MapView = dynamic(() => import("../components/MapView"), {
-  ssr: false,
-});
 
 export default function Home() {
-  const [teams, setTeams] = useState([]);
+  const router = useRouter();
 
   useEffect(() => {
-    async function loadTeams() {
-      try {
-        const data = await api.getTeams();
-        console.log("API RESPONSE:", data); // 🔥 IMPORTANT
-        setTeams(data);
-      } catch (err) {
-        console.error("API ERROR:", err);
+    // Check if user is already authenticated
+    const user = api.getUser?.();
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+
+    if (user && token) {
+      // Authenticated — send to appropriate dashboard
+      if (user.role === 'command_center' || user.role === 'admin') {
+        router.replace('/dashboard');
+      } else {
+        router.replace('/rescue');
       }
+    } else {
+      // Not authenticated — send to login
+      router.replace('/login');
     }
+  }, [router]);
 
-    loadTeams();
-
-    // SOCKET.IO REAL-TIME INTEGRATION
-    const socket = getSocket();
-    
-    // We must join the 'command_center' role to receive the map broadcasts
-    joinRole('command_center');
-
-    // Listen for live vehicle movement
-    socket.on('team:location', (update) => {
-      console.log('📍 Live Movement Received:', update);
-      
-      setTeams((prevTeams) => 
-        prevTeams.map((team) => {
-          // Check against vehicle_id or team_id depending on how it's matched
-          if (team.id === update.team_id || team.vehicle_id === update.team_id) {
-            return {
-              ...team,
-              lat: update.latitude,  // update aliases
-              lng: update.longitude, // update aliases
-              latitude: update.latitude,
-              longitude: update.longitude,
-            };
-          }
-          return team;
-        })
-      );
-    });
-
-    return () => {
-      socket.off('team:location');
-      // disconnectSocket(); // Optional: kept alive for navigation
-    };
-  }, []);
-
+  // Brief loading state while redirecting
   return (
-    <div>
-      <h1 style={{ padding: "10px" }}>🚨 ResQTrack Live Map</h1>
-      <MapView teams={teams} />
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: '#020617',
+    }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{
+          width: 48,
+          height: 48,
+          border: '4px solid rgba(239,68,68,0.2)',
+          borderTop: '4px solid #ef4444',
+          borderRadius: '50%',
+          animation: 'spin 0.8s linear infinite',
+          margin: '0 auto 16px',
+        }} />
+        <p style={{ color: '#94a3b8', fontSize: 14, fontWeight: 500 }}>Loading ResQTrack...</p>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
     </div>
   );
 }

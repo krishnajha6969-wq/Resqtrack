@@ -22,8 +22,16 @@ export default function LoginPage() {
                 await api.register(form.email, form.password, form.full_name, form.role);
             } else {
                 await api.login(form.email, form.password);
+                // Override role based on what the user explicitly selected on login
+                const currentUser = api.getUser();
+                if (currentUser) {
+                    currentUser.role = form.role;
+                    api.setUser(currentUser);
+                }
             }
+            
             const user = api.getUser();
+            // Route based on the role the user chose
             if (user?.role === 'command_center' || user?.role === 'admin') {
                 router.push('/dashboard');
             } else {
@@ -175,6 +183,31 @@ export default function LoginPage() {
 
                     {/* Form */}
                     <form onSubmit={handleSubmit} className="space-y-5">
+                        {/* Always show Role Selection First */}
+                        <div>
+                            <label className="block text-sm font-bold text-slate-400 uppercase tracking-widest mb-3">Select Role</label>
+                            <div className="grid grid-cols-2 gap-4">
+                                {[
+                                    { value: 'rescue_team', label: 'Rescue Team', desc: 'Field operations', icon: '🚑' },
+                                    { value: 'command_center', label: 'Command Center', desc: 'Coordination hub', icon: '🏢' },
+                                ].map(r => (
+                                    <button
+                                        key={r.value}
+                                        type="button"
+                                        onClick={() => setForm({ ...form, role: r.value })}
+                                        className={`p-5 rounded-2xl border-2 text-left transition-all duration-300 ${form.role === r.value
+                                                ? 'bg-red-600/10 border-red-500/50 shadow-[0_0_20px_rgba(239,68,68,0.1)]'
+                                                : 'bg-slate-800/30 border-slate-700/50 hover:border-slate-600'
+                                            }`}
+                                    >
+                                        <span className="text-3xl block mb-3">{r.icon}</span>
+                                        <p className="text-base font-bold text-white">{r.label}</p>
+                                        <p className="text-xs text-slate-500 font-medium mt-1">{r.desc}</p>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
                         {isRegister && (
                             <div>
                                 <label className="block text-sm font-bold text-slate-400 uppercase tracking-widest mb-3">Full Name</label>
@@ -218,32 +251,6 @@ export default function LoginPage() {
                                 required
                             />
                         </div>
-
-                        {isRegister && (
-                            <div>
-                                <label className="block text-sm font-bold text-slate-400 uppercase tracking-widest mb-3">Select Role</label>
-                                <div className="grid grid-cols-2 gap-4">
-                                    {[
-                                        { value: 'rescue_team', label: 'Rescue Team', desc: 'Field operations', icon: '🚑' },
-                                        { value: 'command_center', label: 'Command Center', desc: 'Coordination hub', icon: '🏢' },
-                                    ].map(r => (
-                                        <button
-                                            key={r.value}
-                                            type="button"
-                                            onClick={() => setForm({ ...form, role: r.value })}
-                                            className={`p-5 rounded-2xl border-2 text-left transition-all duration-300 ${form.role === r.value
-                                                    ? 'bg-red-600/10 border-red-500/50 shadow-[0_0_20px_rgba(239,68,68,0.1)]'
-                                                    : 'bg-slate-800/30 border-slate-700/50 hover:border-slate-600'
-                                                }`}
-                                        >
-                                            <span className="text-3xl block mb-3">{r.icon}</span>
-                                            <p className="text-base font-bold text-white">{r.label}</p>
-                                            <p className="text-xs text-slate-500 font-medium mt-1">{r.desc}</p>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
 
                         {/* Submit */}
                         <button

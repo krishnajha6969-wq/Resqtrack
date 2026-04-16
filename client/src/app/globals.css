@@ -21,7 +21,7 @@
 
 /* Force Outfit font across the whole app */
 html {
-  font-size: 18px;
+  font-size: 16px;
 }
 body {
   font-family: var(--font-outfit), system-ui, sans-serif;

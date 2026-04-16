@@ -26,7 +26,7 @@ const DEMO_MISSION = {
 export default function RescuePage() {
     const [teamStatus, setTeamStatus] = useState('responding');
     const [mission, setMission] = useState(DEMO_MISSION);
-    const [position, setPosition] = useState({ lat: 19.3150, lng: 72.8100 });
+    const [position, setPosition] = useState({ lat: 19.2952, lng: 72.8544 }); // Starting from Mira Bhayander on land
     const [showReportModal, setShowReportModal] = useState(false);
     const [isOnline, setIsOnline] = useState(true);
     const [reportForm, setReportForm] = useState({ title: '', description: '', severity: 'medium', type: 'general' });

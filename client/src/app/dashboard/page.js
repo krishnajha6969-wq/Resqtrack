@@ -130,6 +130,7 @@ export default function DashboardPage() {
     }
 
     return (
+        <>
         <div className="min-h-screen bg-slate-950 flex flex-col">
             <Navbar />
 
@@ -223,68 +224,76 @@ export default function DashboardPage() {
                 </div>
             </div>
 
-            {/* Assign Modal */}
-            {showAssignModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 lg:p-12">
-                    <div className="bg-slate-900 border border-slate-700 w-full max-w-4xl rounded-[2rem] shadow-2xl flex flex-col max-h-full overflow-hidden">
-                        
-                        {/* Header */}
-                        <div className="p-6 sm:p-8 border-b border-slate-800 bg-slate-800/30">
-                            <div className="flex items-start sm:items-center justify-between gap-4 mb-3">
-                                <div>
-                                    <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Assign Tactical Team</h3>
-                                    <p className="text-sm sm:text-base text-slate-400 mt-1">Select a response unit for: <span className="text-white font-bold">{showAssignModal.title}</span></p>
-                                </div>
-                                <button onClick={() => setShowAssignModal(null)} className="p-3 text-slate-400 hover:text-white bg-slate-800 rounded-xl transition-all hover:bg-red-600 hover:rotate-90">
-                                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                                </button>
-                            </div>
-                        </div>
+        </div>
 
-                        {/* Team List Box */}
-                        <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-4">
-                            {teams.filter(t => t.status === 'available').length > 0 ? (
-                                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                                    {teams.filter(t => t.status === 'available').map(team => (
-                                        <button
-                                            key={team.id}
-                                            onClick={() => confirmAssign(showAssignModal.id, team.id)}
-                                            className="group relative text-left bg-slate-800/40 hover:bg-slate-800 border border-slate-700 hover:border-blue-500/50 p-6 rounded-2xl transition-all duration-300 hover:-translate-y-1 hover:shadow-xl shadow-black/50"
-                                        >
-                                            <div className="flex justify-between items-start mb-5">
-                                                <div>
-                                                    <p className="text-lg font-bold text-white group-hover:text-blue-400 transition-colors leading-tight">{team.team_name}</p>
-                                                    <p className="text-xs text-slate-500 uppercase tracking-widest font-bold mt-1.5">{team.vehicle_id}</p>
-                                                </div>
-                                            </div>
-                                            
-                                            <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-700/50">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-1.5 h-1.5 rounded-full bg-slate-500" />
-                                                    <span className="text-xs font-mono text-slate-400">{team.latitude.toFixed(4)}, {team.longitude.toFixed(4)}</span>
-                                                </div>
-                                                <div className="w-8 h-8 rounded-full bg-slate-700/80 flex items-center justify-center group-hover:bg-blue-600 group-hover:shadow-[0_0_15px_rgba(37,99,235,0.5)] transition-all">
-                                                    <svg className="w-4 h-4 text-white group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12h15m0 0l-6.75-6.75M19.5 12l-6.75 6.75" /></svg>
-                                                </div>
-                                            </div>
-                                        </button>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="text-center py-20 bg-slate-800/20 rounded-2xl border border-slate-800 border-dashed">
-                                    <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center mx-auto mb-4">
-                                        <svg className="w-8 h-8 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                        </svg>
-                                    </div>
-                                    <p className="text-xl text-slate-300 font-bold mb-2">No Available Teams</p>
-                                    <p className="text-base text-slate-500">All teams are currently busy or responding to other active missions.</p>
-                                </div>
-                            )}
+        {/* Assign Modal — rendered OUTSIDE the flex layout so fixed positioning works correctly */}
+        {showAssignModal && (
+            <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 lg:p-12">
+                <div className="bg-slate-900 border border-slate-700 w-full max-w-4xl rounded-[2rem] shadow-2xl flex flex-col" style={{ maxHeight: '90vh' }}>
+                    
+                    {/* Header */}
+                    <div className="p-6 sm:p-8 border-b border-slate-800 bg-slate-800/30 flex-shrink-0">
+                        <div className="flex items-start sm:items-center justify-between gap-4">
+                            <div>
+                                <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Assign Tactical Team</h3>
+                                <p className="text-sm sm:text-base text-slate-400 mt-1">Select a response unit for: <span className="text-white font-bold">{showAssignModal.title}</span></p>
+                            </div>
+                            <button
+                                onClick={() => setShowAssignModal(null)}
+                                className="flex-shrink-0 p-3 text-slate-400 hover:text-white bg-slate-800 rounded-xl transition-all duration-300 hover:bg-red-600 hover:rotate-90"
+                            >
+                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
                         </div>
                     </div>
+
+                    {/* Team List */}
+                    <div className="flex-1 overflow-y-auto p-6 sm:p-8">
+                        {teams.filter(t => t.status === 'available').length > 0 ? (
+                            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                                {teams.filter(t => t.status === 'available').map(team => (
+                                    <button
+                                        key={team.id}
+                                        onClick={() => confirmAssign(showAssignModal.id, team.id)}
+                                        className="group relative text-left bg-slate-800/40 hover:bg-slate-800 border border-slate-700 hover:border-blue-500/50 p-6 rounded-2xl transition-all duration-300 hover:-translate-y-1 hover:shadow-xl shadow-black/50"
+                                    >
+                                        <div className="flex justify-between items-start mb-5">
+                                            <div>
+                                                <p className="text-lg font-bold text-white group-hover:text-blue-400 transition-colors leading-tight">{team.team_name}</p>
+                                                <p className="text-xs text-slate-500 uppercase tracking-widest font-bold mt-1.5">{team.vehicle_id}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center justify-between pt-4 border-t border-slate-700/50">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-slate-500" />
+                                                <span className="text-xs font-mono text-slate-400">{team.latitude?.toFixed(4)}, {team.longitude?.toFixed(4)}</span>
+                                            </div>
+                                            <div className="w-8 h-8 rounded-full bg-slate-700/80 flex items-center justify-center group-hover:bg-blue-600 group-hover:shadow-[0_0_15px_rgba(37,99,235,0.5)] transition-all">
+                                                <svg className="w-4 h-4 text-white group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12h15m0 0l-6.75-6.75M19.5 12l-6.75 6.75" />
+                                                </svg>
+                                            </div>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-20 bg-slate-800/20 rounded-2xl border border-slate-800 border-dashed">
+                                <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center mx-auto mb-4">
+                                    <svg className="w-8 h-8 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                    </svg>
+                                </div>
+                                <p className="text-xl text-slate-300 font-bold mb-2">No Available Teams</p>
+                                <p className="text-base text-slate-500">All teams are currently busy or responding to other active missions.</p>
+                            </div>
+                        )}
+                    </div>
                 </div>
-            )}
-        </div>
+            </div>
+        )}
+        </>
     );
 }
