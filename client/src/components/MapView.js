@@ -23,8 +23,16 @@ export default function MapView({ teams = [] }) {
         attribution: "&copy; OpenStreetMap contributors",
       }).addTo(map);
 
-      // ✅ Test marker (you can remove later)
-      L.marker([19.2952, 72.8544])
+      // ✅ Test marker fixed to L.divIcon too
+      const testIcon = L.divIcon({
+        className: 'test-marker',
+        html: `<div style="font-size: 24px;">🚩</div>`,
+        iconSize: [24, 24],
+        iconAnchor: [12, 12],
+        popupAnchor: [0, -12]
+      });
+
+      L.marker([19.2952, 72.8544], { icon: testIcon })
         .addTo(map)
         .bindPopup("TEST MARKER - Mira Bhayander")
         .openPopup();
@@ -51,11 +59,21 @@ export default function MapView({ teams = [] }) {
 
       if (lat == null || lng == null) return;
 
-      const marker = L.marker([lat, lng]).addTo(map);
+      // Use a custom divIcon to avoid Next.js missing image 404s
+      const customIcon = L.divIcon({
+        className: 'custom-team-marker',
+        html: `<div style="font-size: 24px; filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.5));">🚑</div>`,
+        iconSize: [24, 24],
+        iconAnchor: [12, 12],
+        popupAnchor: [0, -12]
+      });
+
+      const marker = L.marker([lat, lng], { icon: customIcon }).addTo(map);
 
       marker.bindPopup(`
-        🚑 ${team.team_name || "Team"} <br/>
-        Vehicle: ${team.vehicle_id || "N/A"}
+        🚑 <strong>${team.team_name || "Team"}</strong> <br/>
+        Vehicle: ${team.vehicle_id || "N/A"} <br/>
+        Status: ${team.status || "Unknown"}
       `);
 
       markersRef.current.push(marker);
