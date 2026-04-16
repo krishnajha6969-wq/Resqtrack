@@ -1,6 +1,6 @@
 import { io } from 'socket.io-client';
 
-const SOCKET_URL = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:5000';
+const SOCKET_URL = process.env.NEXT_PUBLIC_WS_URL || 'https://resqtrack-backend-cb04.onrender.com';
 
 let socket = null;
 

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import Navbar from '@/components/Navbar';
 import { StatusBadge } from '@/components/Cards';
+import { sendLocationUpdate } from '@/lib/socket';
 
 const MapView = dynamic(() => import('@/components/MapView'), { ssr: false });
 
@@ -35,7 +36,12 @@ export default function RescuePage() {
                 const target = mission.incident;
                 const dx = (target.latitude - prev.lat) * 0.02;
                 const dy = (target.longitude - prev.lng) * 0.02;
-                return { lat: prev.lat + dx + (Math.random() - 0.5) * 0.0003, lng: prev.lng + dy + (Math.random() - 0.5) * 0.0003 };
+                const nextPos = { lat: prev.lat + dx + (Math.random() - 0.5) * 0.0003, lng: prev.lng + dy + (Math.random() - 0.5) * 0.0003 };
+                
+                // Emitting the newly generated position to the command center
+                sendLocationUpdate('RV-001', nextPos.lat, nextPos.lng, 35, 90);
+                
+                return nextPos;
             });
         }, 2000);
         return () => clearInterval(interval);
