@@ -1,8 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import Navbar from '@/components/Navbar';
 import { IncidentCard, StatusBadge } from '@/components/Cards';
+
+const MapView = dynamic(() => import('@/components/MapView'), { ssr: false });
+const LocationPicker = dynamic(() => import('@/components/LocationPicker'), { ssr: false });
 
 const INITIAL_INCIDENTS = [
     { id: '1', title: 'Building Collapse - Near Maxus Mall', latitude: 19.2952, longitude: 72.8544, severity: 'critical', description: 'Old building near Maxus Mall collapsed during heavy rain. Multiple casualties reported. First responders on scene. Need additional rescue teams with heavy equipment.', incident_type: 'structural', status: 'in_progress', assigned_team_name: 'Bravo Medical', reporter_name: 'Mira Road Fire Station', created_at: new Date(Date.now() - 3600000).toISOString(), updated_at: new Date(Date.now() - 1800000).toISOString() },
@@ -37,14 +41,35 @@ export default function IncidentsPage() {
             status: 'reported',
             assigned_team_name: null,
             reporter_name: 'You',
-            latitude: parseFloat(newIncident.latitude) || 19.290 + Math.random() * 0.02,
-            longitude: parseFloat(newIncident.longitude) || 72.850 + Math.random() * 0.02,
+            latitude: parseFloat(newIncident.latitude),
+            longitude: parseFloat(newIncident.longitude),
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
         };
         setIncidents([incident, ...incidents]);
         setShowCreate(false);
         setNewIncident({ title: '', description: '', severity: 'medium', incident_type: 'general', latitude: '', longitude: '' });
+    };
+
+    const handleLocateMe = () => {
+        if (!navigator.geolocation) {
+            alert("Geolocation is not supported by your browser");
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                setNewIncident(prev => ({
+                    ...prev,
+                    latitude: position.coords.latitude.toFixed(6),
+                    longitude: position.coords.longitude.toFixed(6)
+                }));
+            },
+            (error) => {
+                console.error("Error getting location:", error);
+                alert("Unable to retrieve your location. Please enter manually or pick from map.");
+            }
+        );
     };
 
     const handleStatusChange = (id, newStatus) => {
@@ -270,29 +295,57 @@ export default function IncidentsPage() {
                                     </select>
                                 </div>
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Latitude</label>
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-sm font-bold text-slate-400 uppercase tracking-wider">Location</label>
+                                    <button
+                                        type="button"
+                                        onClick={handleLocateMe}
+                                        className="text-xs font-bold text-red-400 hover:text-red-300 flex items-center gap-1.5 px-3 py-1.5 bg-red-400/10 rounded-lg transition-colors"
+                                    >
+                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+                                        </svg>
+                                        Use My Location
+                                    </button>
+                                </div>
+                                
+                                <div className="grid grid-cols-2 gap-4">
                                     <input
                                         type="number"
                                         step="any"
                                         value={newIncident.latitude}
                                         onChange={(e) => setNewIncident({ ...newIncident, latitude: e.target.value })}
                                         className="w-full px-4 py-3.5 bg-slate-800 border border-slate-600 rounded-xl text-white text-base"
-                                        placeholder="19.2900"
+                                        placeholder="Latitude"
+                                        required
                                     />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Longitude</label>
                                     <input
                                         type="number"
                                         step="any"
                                         value={newIncident.longitude}
                                         onChange={(e) => setNewIncident({ ...newIncident, longitude: e.target.value })}
                                         className="w-full px-4 py-3.5 bg-slate-800 border border-slate-600 rounded-xl text-white text-base"
-                                        placeholder="72.8500"
+                                        placeholder="Longitude"
+                                        required
                                     />
                                 </div>
+
+                                <div className="relative rounded-xl overflow-hidden border border-slate-700 h-48 bg-slate-800 group cursor-crosshair">
+                                    <LocationPicker 
+                                        value={{ lat: newIncident.latitude, lng: newIncident.longitude }}
+                                        onChange={(lat, lng) => setNewIncident(prev => ({ ...prev, latitude: lat, longitude: lng }))}
+                                    />
+                                    <div className="absolute top-2 right-2 z-[1000] pointer-events-none">
+                                        <div className="bg-slate-900/80 backdrop-blur-md px-2 py-1 rounded text-[10px] font-bold text-slate-400 border border-white/5">
+                                            CLICK TO PICK
+                                        </div>
+                                    </div>
+                                </div>
+                                <p className="text-[11px] text-slate-500 font-medium">
+                                    Tip: You can drag the marker or click anywhere on the map to set the incident location.
+                                </p>
                             </div>
                             <div className="flex gap-3 pt-3">
                                 <button

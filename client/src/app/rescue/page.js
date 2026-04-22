@@ -140,24 +140,37 @@ export default function RescuePage() {
         loadNavData();
     }, [mission]);
 
-    // ─── 4. GPS simulation — move toward incident, emit location ─────────────
+    // ─── 4. GPS simulation — move toward incident or patrol, emit location ──────
     useEffect(() => {
-        if (!mission || !myTeam) return;
+        if (!myTeam) return;
         const vehicleId = myTeam.vehicle_id || 'RV-001';
 
         const interval = setInterval(() => {
             setPosition(prev => {
-                const target = mission.incident;
-                const dx = (target.latitude - prev.lat) * 0.02;
-                const dy = (target.longitude - prev.lng) * 0.02;
-                const nextPos = {
-                    lat: prev.lat + dx + (Math.random() - 0.5) * 0.0003,
-                    lng: prev.lng + dy + (Math.random() - 0.5) * 0.0003,
-                };
+                let nextPos;
+                
+                if (mission) {
+                    // Mission Mode: Move toward target
+                    const target = mission.incident;
+                    const dx = (target.latitude - prev.lat) * 0.02;
+                    const dy = (target.longitude - prev.lng) * 0.02;
+                    nextPos = {
+                        lat: prev.lat + dx + (Math.random() - 0.5) * 0.0003,
+                        lng: prev.lng + dy + (Math.random() - 0.5) * 0.0003,
+                    };
+                } else {
+                    // Patrol Mode: Small random movements around current area
+                    nextPos = {
+                        lat: prev.lat + (Math.random() - 0.5) * 0.0005,
+                        lng: prev.lng + (Math.random() - 0.5) * 0.0005,
+                    };
+                }
+
+                // Emit to websocket so Command Center sees the movement
                 sendLocationUpdate(vehicleId, nextPos.lat, nextPos.lng, 35, 90);
                 return nextPos;
             });
-        }, 2000);
+        }, 3000); // Pulse every 3 seconds
 
         return () => clearInterval(interval);
     }, [mission, myTeam]);
