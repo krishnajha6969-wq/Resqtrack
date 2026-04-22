@@ -20,6 +20,8 @@ export default function DashboardPage() {
     const [activePanel, setActivePanel] = useState('incidents');
     const [selectedTeam, setSelectedTeam] = useState(null);
     const [showAssignModal, setShowAssignModal] = useState(null);
+    const [socketConnected, setSocketConnected] = useState(false);
+    const [lastUpdate, setLastUpdate] = useState(null);
 
     // Initial Auth Check
     useEffect(() => {
@@ -56,12 +58,18 @@ export default function DashboardPage() {
         
         // 🟢 INITIALIZE WEBSOCKET FOR COMMAND DASHBOARD
         const socket = getSocket();
+        setSocketConnected(socket.connected);
         
+        socket.on('connect', () => setSocketConnected(true));
+        socket.on('disconnect', () => setSocketConnected(false));
+
         // Join the exclusive command center room for broad admin broadcasts
         joinRole('command_center');
         
         // Listen for live vehicle tracking pulses
         const handleLocationUpdate = (update) => {
+            console.log("[Dashboard] Received location update:", update);
+            setLastUpdate(new Date());
             setTeams((prevTeams) => 
                 prevTeams.map((team) => {
                     if (team.id === update.team_id || team.vehicle_id === update.team_id) {
@@ -71,6 +79,7 @@ export default function DashboardPage() {
                             lng: update.longitude,
                             latitude: update.latitude,     // Override database lat
                             longitude: update.longitude,   // Override database lng
+                            last_seen: new Date().toLocaleTimeString()
                         };
                     }
                     return team;
@@ -157,6 +166,20 @@ export default function DashboardPage() {
                             <span className="text-[10px] text-red-400 font-black uppercase tracking-widest">{incidentCounts.critical} Critical Incidents</span>
                             <span className="text-slate-800">|</span>
                             <span className="text-[10px] text-amber-400 font-black uppercase tracking-widest">{incidentCounts.unassigned} Unassigned</span>
+                        </div>
+                        <div className="glass px-6 py-2.5 rounded-2xl flex items-center gap-3 border-white/5">
+                            <div className={`w-2 h-2 rounded-full ${socketConnected ? 'bg-emerald-400 shadow-[0_0_8px_#34d399]' : 'bg-red-400 animate-pulse'}`} />
+                            <span className="text-[10px] text-slate-300 font-bold uppercase tracking-widest">
+                                {socketConnected ? 'Live Connection Active' : 'Disconnected'}
+                            </span>
+                            {lastUpdate && (
+                                <>
+                                    <span className="text-slate-800">|</span>
+                                    <span className="text-[10px] text-blue-400 font-mono tracking-tighter">
+                                        Last Signal: {lastUpdate.toLocaleTimeString()}
+                                    </span>
+                                </>
+                            )}
                         </div>
                     </div>
 

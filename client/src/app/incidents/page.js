@@ -242,7 +242,7 @@ export default function IncidentsPage() {
             {showCreate && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
                     <div className="bg-slate-900 border border-slate-700 rounded-2xl p-8 w-full max-w-lg shadow-2xl">
-                        <h3 className="text-2xl font-black text-white mb-6">Report New Incident</h3>
+                        <h3 className="text-2xl font-black text-white mb-6">Report Incident (Enhanced)</h3>
                         <form onSubmit={handleCreate} className="space-y-5">
                             <div>
                                 <label className="block text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Title</label>

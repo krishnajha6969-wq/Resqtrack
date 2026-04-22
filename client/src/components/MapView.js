@@ -23,26 +23,10 @@ export default function MapView({ teams = [], incidents = [], congestion = [], r
         attribution: "&copy; OpenStreetMap contributors",
       }).addTo(map);
 
-      // ✅ Test marker fixed to L.divIcon too
-      const testIcon = L.divIcon({
-        className: 'test-marker',
-        html: `<div style="font-size: 24px;">🚩</div>`,
-        iconSize: [24, 24],
-        iconAnchor: [12, 12],
-        popupAnchor: [0, -12]
-      });
-
-      L.marker([19.2952, 72.8544], { icon: testIcon })
-        .addTo(map)
-        .bindPopup("TEST MARKER - Mira Bhayander")
-        .openPopup();
-
       mapInstance.current = map;
     }
 
     const map = mapInstance.current;
-
-    console.log("ALL TEAMS:", teams);
 
     // 🟢 Remove old markers safely
     markersRef.current.forEach((marker) => map.removeLayer(marker));
@@ -50,16 +34,11 @@ export default function MapView({ teams = [], incidents = [], congestion = [], r
 
     // 🟢 Add new markers
     teams.forEach((team) => {
-      console.log("TEAM:", team);
-
       const lat = team.latitude ?? team.lat;
       const lng = team.longitude ?? team.lng;
 
-      console.log("COORDS:", lat, lng);
-
       if (lat == null || lng == null) return;
 
-      // Use a custom divIcon to avoid Next.js missing image 404s
       const customIcon = L.divIcon({
         className: 'custom-team-marker',
         html: `<div style="font-size: 24px; filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.5));">🚑</div>`,
@@ -74,7 +53,8 @@ export default function MapView({ teams = [], incidents = [], congestion = [], r
         <div style="font-family: sans-serif; background: #020617; color: white; padding: 4px; border-radius: 8px;">
            <span style="font-size: 16px;">🚑</span> <strong style="color: #60a5fa">${team.team_name || "Team"}</strong> <br/>
            <span style="color: #94a3b8; font-size: 11px; text-transform: uppercase;">Vehicle ID:</span> ${team.vehicle_id || "N/A"} <br/>
-           <span style="color: #94a3b8; font-size: 11px; text-transform: uppercase;">Status:</span> ${team.status || "Unknown"}
+           <span style="color: #94a3b8; font-size: 11px; text-transform: uppercase;">Status:</span> ${team.status || "Unknown"} <br/>
+           ${team.last_seen ? `<span style="color: #60a5fa; font-size: 10px; font-weight: bold;">LIVE: ${team.last_seen}</span>` : ''}
         </div>
       `);
 
