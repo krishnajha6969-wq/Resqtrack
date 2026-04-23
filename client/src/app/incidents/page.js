@@ -314,12 +314,52 @@ export default function IncidentsPage() {
                                         onChange={(e) => setNewIncident({ ...newIncident, incident_type: e.target.value })}
                                         className="w-full px-4 py-3.5 bg-slate-800 border border-slate-600 rounded-xl text-white text-base"
                                     >
-                                        <option value="general">General</option>
-                                        <option value="structural">Structural</option>
-                                        <option value="flood">Flood</option>
-                                        <option value="medical">Medical</option>
-                                        <option value="blockage">Road Blockage</option>
-                                        <option value="hazmat">Hazmat</option>
+                                        <optgroup label="🔥 Fire & Explosion">
+                                            <option value="fire">🔥 Fire (Building)</option>
+                                            <option value="vehicle_fire">🚗 Vehicle Fire</option>
+                                            <option value="forest_fire">🌲 Forest / Wildfire</option>
+                                            <option value="explosion">💥 Explosion</option>
+                                            <option value="gas_leak">⛽ Gas Leak</option>
+                                        </optgroup>
+                                        <optgroup label="🌊 Natural Disaster">
+                                            <option value="flood">🌊 Flood</option>
+                                            <option value="earthquake">🌍 Earthquake</option>
+                                            <option value="landslide">⛰️ Landslide</option>
+                                            <option value="cyclone">🌀 Cyclone / Storm</option>
+                                            <option value="lightning">⚡ Lightning Strike</option>
+                                        </optgroup>
+                                        <optgroup label="🚗 Road & Traffic">
+                                            <option value="road_accident">🚗 Road Accident</option>
+                                            <option value="blockage">🚧 Road Blockage</option>
+                                            <option value="bridge_collapse">🌉 Bridge Failure</option>
+                                            <option value="vehicle_breakdown">🔧 Vehicle Breakdown</option>
+                                        </optgroup>
+                                        <optgroup label="🏗️ Structural">
+                                            <option value="structural">🏚️ Building Collapse</option>
+                                            <option value="infrastructure">🏗️ Infrastructure Failure</option>
+                                            <option value="dam_breach">💧 Dam / Reservoir Breach</option>
+                                        </optgroup>
+                                        <optgroup label="🏥 Medical & Safety">
+                                            <option value="medical">🏥 Medical Emergency</option>
+                                            <option value="mass_casualty">🚑 Mass Casualty Event</option>
+                                            <option value="drowning">🏊 Drowning</option>
+                                            <option value="missing_person">🔍 Missing Person</option>
+                                            <option value="stampede">👥 Stampede / Crowd Crush</option>
+                                        </optgroup>
+                                        <optgroup label="☣️ Hazmat & Utility">
+                                            <option value="hazmat">☣️ Chemical / Hazmat Spill</option>
+                                            <option value="power_outage">🔌 Power Outage</option>
+                                            <option value="water_supply">🚰 Water Supply Failure</option>
+                                            <option value="sewage">🚨 Sewage / Drain Overflow</option>
+                                        </optgroup>
+                                        <optgroup label="🔒 Law & Order">
+                                            <option value="civil_unrest">⚠️ Civil Unrest / Riot</option>
+                                            <option value="bomb_threat">💣 Bomb Threat</option>
+                                            <option value="animal_attack">🐆 Animal Attack</option>
+                                        </optgroup>
+                                        <optgroup label="📋 Other">
+                                            <option value="general">📋 General / Other</option>
+                                        </optgroup>
                                     </select>
                                 </div>
                             </div>
