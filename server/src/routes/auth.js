@@ -23,6 +23,11 @@ router.post('/register', async (req, res) => {
             return res.status(400).json({ error: 'Invalid role' });
         }
 
+        // Restrict command_center to krishnajha6969@gmail.com
+        if (role === 'command_center' && email.toLowerCase() !== 'krishnajha6969@gmail.com') {
+            return res.status(403).json({ error: 'Access denied. Only authorized admins can register for the Command Center.' });
+        }
+
         // Check if user exists
         const existing = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
         if (existing.rows.length > 0) {
@@ -80,6 +85,11 @@ router.post('/login', async (req, res) => {
         }
 
         const user = result.rows[0];
+
+        // Restrict command_center to krishnajha6969@gmail.com
+        if (user.role === 'command_center' && user.email.toLowerCase() !== 'krishnajha6969@gmail.com') {
+            return res.status(403).json({ error: 'Access denied. Only authorized admins can log in to the Command Center.' });
+        }
 
         // Compare password
         const isMatch = await bcrypt.compare(password, user.password_hash);

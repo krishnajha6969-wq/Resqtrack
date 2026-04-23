@@ -16,6 +16,12 @@ export default function CommandCenterLogin() {
         setError('');
         setLoading(true);
         try {
+            if (form.email.toLowerCase() !== 'krishnajha6969@gmail.com') {
+                setError('Access denied. Only authorized admins can access the Command Center.');
+                setLoading(false);
+                return;
+            }
+
             if (isRegister) {
                 await api.register(form.email, form.password, form.full_name, 'command_center');
             } else {
