@@ -22,6 +22,9 @@ export default function DashboardPage() {
     const [showAssignModal, setShowAssignModal] = useState(null);
     const [socketConnected, setSocketConnected] = useState(false);
     const [lastUpdate, setLastUpdate] = useState(null);
+    const [showAddTeamModal, setShowAddTeamModal] = useState(false);
+    const [newTeam, setNewTeam] = useState({ team_name: '', vehicle_id: '', latitude: '19.2952', longitude: '72.8544' });
+    const [addingTeam, setAddingTeam] = useState(false);
 
     // Initial Auth Check
     useEffect(() => {
@@ -115,6 +118,28 @@ export default function DashboardPage() {
             alert("Could not assign team to incident. Check database connection.");
         }
         setShowAssignModal(null);
+    };
+
+    const handleAddTeam = async () => {
+        if (!newTeam.team_name || !newTeam.vehicle_id) return;
+        setAddingTeam(true);
+        try {
+            const res = await fetch('https://resqtrack-backend-cb04.onrender.com/api/teams', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newTeam),
+            });
+            if (res.ok) {
+                const created = await res.json();
+                setTeams(prev => [...prev, { ...created, lat: created.latitude, lng: created.longitude }]);
+                setShowAddTeamModal(false);
+                setNewTeam({ team_name: '', vehicle_id: '', latitude: '19.2952', longitude: '72.8544' });
+            }
+        } catch (err) {
+            console.error('Failed to add team:', err);
+        } finally {
+            setAddingTeam(false);
+        }
     };
 
     const statusCounts = {
@@ -228,9 +253,22 @@ export default function DashboardPage() {
                         {activePanel === 'incidents' && incidents.map(incident => (
                             <IncidentCard key={incident.id} incident={incident} onAssign={handleAssign} />
                         ))}
-                        {activePanel === 'teams' && teams.map(team => (
-                            <TeamCard key={team.id} team={team} />
-                        ))}
+                        {activePanel === 'teams' && (
+                            <>
+                                <button
+                                    onClick={() => setShowAddTeamModal(true)}
+                                    className="w-full mb-2 py-3 px-4 bg-blue-600/10 hover:bg-blue-600/20 border border-blue-500/30 hover:border-blue-500/50 rounded-xl text-sm font-bold text-blue-400 hover:text-blue-300 transition-all flex items-center justify-center gap-2"
+                                >
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                                    </svg>
+                                    Add New Team
+                                </button>
+                                {teams.map(team => (
+                                    <TeamCard key={team.id} team={team} />
+                                ))}
+                            </>
+                        )}
                         {activePanel === 'congestion' && congestion.map(zone => (
                             <div key={zone.id} className="bg-slate-800/80 p-4 rounded-xl border border-slate-700/50">
                                 <div className="flex items-center justify-between mb-2">
@@ -313,6 +351,44 @@ export default function DashboardPage() {
                                 <p className="text-base text-slate-500">All teams are currently busy or responding to other active missions.</p>
                             </div>
                         )}
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {/* Add Team Modal */}
+        {showAddTeamModal && (
+            <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+                <div className="bg-slate-900 border border-slate-700 w-full max-w-md rounded-3xl shadow-2xl p-8">
+                    <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-2xl font-black text-white tracking-tight">Add New Team</h3>
+                        <button onClick={() => setShowAddTeamModal(false)} className="p-2 text-slate-400 hover:text-white bg-slate-800 rounded-xl hover:bg-red-600 transition-all">
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Team Name</label>
+                            <input type="text" value={newTeam.team_name} onChange={e => setNewTeam({ ...newTeam, team_name: e.target.value })}
+                                className="w-full px-4 py-3 bg-slate-800 border border-slate-600 rounded-xl text-white focus:outline-none focus:border-blue-500/50 placeholder:text-slate-600"
+                                placeholder="e.g. Alpha Response Unit" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Vehicle ID</label>
+                            <input type="text" value={newTeam.vehicle_id} onChange={e => setNewTeam({ ...newTeam, vehicle_id: e.target.value })}
+                                className="w-full px-4 py-3 bg-slate-800 border border-slate-600 rounded-xl text-white focus:outline-none focus:border-blue-500/50 placeholder:text-slate-600"
+                                placeholder="e.g. RV-007" />
+                        </div>
+                        <button onClick={handleAddTeam} disabled={addingTeam || !newTeam.team_name || !newTeam.vehicle_id}
+                            className="w-full py-4 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-500 text-white font-black uppercase tracking-widest rounded-2xl transition-all active:scale-[0.98] flex items-center justify-center gap-2">
+                            {addingTeam ? (
+                                <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Adding...</>
+                            ) : (
+                                'Create Team'
+                            )}
+                        </button>
                     </div>
                 </div>
             </div>
