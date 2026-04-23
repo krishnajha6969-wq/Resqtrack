@@ -7,6 +7,26 @@ export default function LoginPage() {
 
     const portals = [
         {
+            role: 'citizen',
+            href: '/report',
+            label: 'Citizen Portal',
+            subtitle: 'Public Reporting',
+            description: 'Report emergencies, traffic congestion, or safety hazards. No login required — your report goes directly to the command center.',
+            gradient: 'from-red-500 via-orange-600 to-amber-600',
+            glowColor: 'rgba(239,68,68,0.5)',
+            borderColor: 'rgba(239,68,68,0.3)',
+            accentColor: '#ef4444',
+            tag: '🚨',
+            icon: (
+                <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                </svg>
+            ),
+            features: ['Report incidents instantly', 'Report traffic congestion', 'Auto GPS location', 'No login required'],
+            demoRoute: '/report',
+            noLogin: true,
+        },
+        {
             role: 'command_center',
             href: '/login/command-center',
             label: 'Command Center',
@@ -103,7 +123,7 @@ export default function LoginPage() {
 
             {/* Portal Cards */}
             <main className="relative z-10 flex-1 flex items-start justify-center px-4 pb-16">
-                <div className="grid md:grid-cols-2 gap-6 w-full max-w-4xl">
+                <div className="grid md:grid-cols-3 gap-6 w-full max-w-6xl">
                     {portals.map((portal) => (
                         <div key={portal.role} className="flex flex-col">
                             {/* Main Card */}
@@ -163,10 +183,10 @@ export default function LoginPage() {
 
                             {/* Demo shortcut below each card */}
                             <button
-                                onClick={() => handleDemoLogin(portal)}
+                                onClick={() => portal.noLogin ? router.push(portal.href) : handleDemoLogin(portal)}
                                 className="mt-3 w-full py-3 text-xs font-bold uppercase tracking-widest rounded-2xl border border-slate-800 text-slate-600 hover:text-slate-300 hover:border-slate-600 transition-all"
                             >
-                                Try Demo — {portal.label}
+                                {portal.noLogin ? 'Report Now — No Login' : `Try Demo — ${portal.label}`}
                             </button>
                         </div>
                     ))}

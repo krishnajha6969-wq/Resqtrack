@@ -11,6 +11,7 @@ const teamRoutes = require('./routes/teams');
 const incidentRoutes = require('./routes/incidents');
 const congestionRoutes = require('./routes/congestion');
 const routeRoutes = require('./routes/routes');
+const publicRoutes = require('./routes/public');
 
 // Import WebSocket handler
 const { setupWebSocket } = require('./websocket/handler');
@@ -59,6 +60,7 @@ app.use('/api/team', teamRoutes);
 app.use('/api/incidents', incidentRoutes);
 app.use('/api/congestion', congestionRoutes);
 app.use('/api/routes', routeRoutes);
+app.use('/api/public', publicRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
