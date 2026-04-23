@@ -8,7 +8,7 @@ export default function LoginPage() {
     const portals = [
         {
             role: 'citizen',
-            href: '/report',
+            href: '/login/citizen',
             label: 'Citizen Portal',
             subtitle: 'Public Reporting',
             description: 'Report emergencies, traffic congestion, or safety hazards. No login required — your report goes directly to the command center.',
@@ -22,9 +22,8 @@ export default function LoginPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
                 </svg>
             ),
-            features: ['Report incidents instantly', 'Report traffic congestion', 'Auto GPS location', 'No login required'],
+            features: ['Report incidents instantly', 'Report traffic congestion', 'Auto GPS location', 'Verified identity'],
             demoRoute: '/report',
-            noLogin: true,
         },
         {
             role: 'command_center',

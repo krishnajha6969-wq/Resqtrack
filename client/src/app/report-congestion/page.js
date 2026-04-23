@@ -1,11 +1,28 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import api from '@/lib/api';
 
 export default function ReportCongestionPage() {
+    const router = useRouter();
+    const [user, setUser] = useState(null);
+    const [authChecked, setAuthChecked] = useState(false);
     const [step, setStep] = useState('form'); // form | submitting | success
     const [locationStatus, setLocationStatus] = useState('idle');
+
+    // Auth guard
+    useEffect(() => {
+        const storedUser = api.getUser();
+        const token = typeof window !== 'undefined' ? localStorage.getItem('resqtrack_token') : null;
+        if (!storedUser || !token) {
+            router.replace('/login/citizen');
+            return;
+        }
+        setUser(storedUser);
+        setAuthChecked(true);
+    }, [router]);
     const [form, setForm] = useState({
         congestion_level: '',
         reasons: [],
@@ -61,9 +78,13 @@ export default function ReportCongestionPage() {
         setStep('submitting');
 
         try {
+            const token = typeof window !== 'undefined' ? localStorage.getItem('resqtrack_token') : null;
             const res = await fetch('https://resqtrack-backend-cb04.onrender.com/api/public/congestion/report', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
                 body: JSON.stringify({
                     latitude: parseFloat(form.latitude),
                     longitude: parseFloat(form.longitude),
@@ -97,6 +118,15 @@ export default function ReportCongestionPage() {
         { value: 'protest', label: '📢 Protest / Rally' },
         { value: 'police_check', label: '👮 Police Checkpoint' },
     ];
+
+    // Wait for auth check
+    if (!authChecked) {
+        return (
+            <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+                <div className="w-12 h-12 border-4 border-slate-800 border-t-amber-500 rounded-full animate-spin" />
+            </div>
+        );
+    }
 
     // ─── SUCCESS SCREEN ─────────────────────────────────
     if (step === 'success') {
@@ -164,7 +194,7 @@ export default function ReportCongestionPage() {
                         <span className="text-xs font-bold text-amber-400 uppercase tracking-widest">🚗 Traffic Report</span>
                     </div>
                     <h1 className="text-3xl font-black text-white tracking-tight mb-2">Report Traffic Congestion</h1>
-                    <p className="text-slate-400">Help rescue teams avoid blocked routes. No login required.</p>
+                    <p className="text-slate-400">Signed in as <span className="text-white font-bold">{user?.email}</span>. Help rescue teams avoid blocked routes.</p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="bg-slate-900/80 border border-slate-700/50 rounded-3xl p-6 sm:p-8 space-y-6">

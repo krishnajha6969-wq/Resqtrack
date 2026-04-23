@@ -16,6 +16,8 @@ export default function Home() {
       // Authenticated — send to appropriate dashboard
       if (user.role === 'command_center' || user.role === 'admin') {
         router.replace('/dashboard');
+      } else if (user.role === 'citizen') {
+        router.replace('/report');
       } else {
         router.replace('/rescue');
       }

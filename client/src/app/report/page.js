@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
+import api from '@/lib/api';
 
 const LocationPicker = dynamic(() => import('@/components/LocationPicker'), { ssr: false });
 
@@ -55,8 +57,23 @@ const INCIDENT_TYPES = [
 ];
 
 export default function CitizenReportPage() {
+    const router = useRouter();
+    const [user, setUser] = useState(null);
+    const [authChecked, setAuthChecked] = useState(false);
     const [step, setStep] = useState('form'); // form | submitting | success
     const [locationStatus, setLocationStatus] = useState('idle');
+
+    // Auth guard — redirect if not logged in
+    useEffect(() => {
+        const storedUser = api.getUser();
+        const token = typeof window !== 'undefined' ? localStorage.getItem('resqtrack_token') : null;
+        if (!storedUser || !token) {
+            router.replace('/login/citizen');
+            return;
+        }
+        setUser(storedUser);
+        setAuthChecked(true);
+    }, [router]);
     const [form, setForm] = useState({
         title: '',
         description: '',
@@ -123,9 +140,13 @@ export default function CitizenReportPage() {
         setStep('submitting');
 
         try {
+            const token = typeof window !== 'undefined' ? localStorage.getItem('resqtrack_token') : null;
             const res = await fetch('https://resqtrack-backend-cb04.onrender.com/api/public/incident/report', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
                 body: JSON.stringify({
                     title: form.title,
                     description: form.description,
@@ -134,7 +155,7 @@ export default function CitizenReportPage() {
                     latitude: parseFloat(form.latitude),
                     longitude: parseFloat(form.longitude),
                     victim_count: form.victim_count ? parseInt(form.victim_count) : 0,
-                    reporter_name: form.reporter_name || 'Anonymous Citizen',
+                    reporter_name: user?.full_name || form.reporter_name || 'Citizen',
                     reporter_phone: form.reporter_phone || '',
                     hazards: [
                         form.requires_evacuation && 'requires_evacuation',
@@ -159,6 +180,15 @@ export default function CitizenReportPage() {
     };
 
     const update = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
+
+    // Wait for auth check
+    if (!authChecked) {
+        return (
+            <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+                <div className="w-12 h-12 border-4 border-slate-800 border-t-red-500 rounded-full animate-spin" />
+            </div>
+        );
+    }
 
     // ─── SUCCESS SCREEN ─────────────────────────────────
     if (step === 'success') {
@@ -221,9 +251,17 @@ export default function CitizenReportPage() {
                         </div>
                         <span className="text-lg font-black text-white tracking-tighter">Res<span className="text-red-500">Q</span>Track</span>
                     </Link>
-                    <Link href="/report-congestion" className="text-xs font-bold text-amber-400 hover:text-amber-300 uppercase tracking-wider px-4 py-2 bg-amber-400/10 rounded-xl transition-colors">
-                        🚗 Report Traffic
-                    </Link>
+                    <div className="flex items-center gap-3">
+                        {user && (
+                            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-800 rounded-xl border border-slate-700">
+                                <div className="w-2 h-2 rounded-full bg-emerald-400" />
+                                <span className="text-xs font-bold text-slate-400">{user.full_name}</span>
+                            </div>
+                        )}
+                        <Link href="/report-congestion" className="text-xs font-bold text-amber-400 hover:text-amber-300 uppercase tracking-wider px-4 py-2 bg-amber-400/10 rounded-xl transition-colors">
+                            🚗 Report Traffic
+                        </Link>
+                    </div>
                 </div>
             </nav>
 
@@ -235,7 +273,7 @@ export default function CitizenReportPage() {
                         <span className="text-xs font-bold text-red-400 uppercase tracking-widest">Emergency Reporting</span>
                     </div>
                     <h1 className="text-3xl font-black text-white tracking-tight mb-2">Report an Incident</h1>
-                    <p className="text-slate-400">No login required. Your report is sent directly to the command center.</p>
+                    <p className="text-slate-400">Signed in as <span className="text-white font-bold">{user?.email}</span>. Your report is traceable and sent to the command center.</p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="bg-slate-900/80 border border-slate-700/50 rounded-3xl p-6 sm:p-8 space-y-6">

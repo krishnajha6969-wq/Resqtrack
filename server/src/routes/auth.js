@@ -19,7 +19,7 @@ router.post('/register', async (req, res) => {
             return res.status(400).json({ error: 'All fields are required' });
         }
 
-        if (!['rescue_team', 'command_center'].includes(role)) {
+        if (!['rescue_team', 'command_center', 'citizen'].includes(role)) {
             return res.status(400).json({ error: 'Invalid role' });
         }
 
