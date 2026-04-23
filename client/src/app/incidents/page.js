@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import Navbar from '@/components/Navbar';
 import { IncidentCard, StatusBadge } from '@/components/Cards';
@@ -22,10 +22,41 @@ export default function IncidentsPage() {
     const [filter, setFilter] = useState({ status: '', severity: '' });
     const [showCreate, setShowCreate] = useState(false);
     const [selectedIncident, setSelectedIncident] = useState(null);
+    const [locationStatus, setLocationStatus] = useState('idle'); // idle | detecting | found | error
     const [newIncident, setNewIncident] = useState({
         title: '', description: '', severity: 'medium', incident_type: 'general',
         latitude: '', longitude: '',
     });
+
+    // Auto-capture location the moment the form is opened
+    useEffect(() => {
+        if (!showCreate) return;
+        if (!navigator.geolocation) {
+            setLocationStatus('error');
+            return;
+        }
+        setLocationStatus('detecting');
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                setNewIncident(prev => ({
+                    ...prev,
+                    latitude: pos.coords.latitude.toFixed(6),
+                    longitude: pos.coords.longitude.toFixed(6),
+                }));
+                setLocationStatus('found');
+            },
+            () => {
+                // Fallback to area default if GPS denied
+                setNewIncident(prev => ({
+                    ...prev,
+                    latitude: (19.290 + Math.random() * 0.02).toFixed(6),
+                    longitude: (72.850 + Math.random() * 0.02).toFixed(6),
+                }));
+                setLocationStatus('fallback');
+            },
+            { timeout: 8000, enableHighAccuracy: true }
+        );
+    }, [showCreate]);
 
     const filteredIncidents = incidents.filter(i => {
         if (filter.status && i.status !== filter.status) return false;
@@ -48,27 +79,24 @@ export default function IncidentsPage() {
         };
         setIncidents([incident, ...incidents]);
         setShowCreate(false);
+        setLocationStatus('idle');
         setNewIncident({ title: '', description: '', severity: 'medium', incident_type: 'general', latitude: '', longitude: '' });
     };
 
-    const handleLocateMe = () => {
-        if (!navigator.geolocation) {
-            alert("Geolocation is not supported by your browser");
-            return;
-        }
-
+    const handleRetryLocation = () => {
+        if (!navigator.geolocation) return;
+        setLocationStatus('detecting');
         navigator.geolocation.getCurrentPosition(
-            (position) => {
+            (pos) => {
                 setNewIncident(prev => ({
                     ...prev,
-                    latitude: position.coords.latitude.toFixed(6),
-                    longitude: position.coords.longitude.toFixed(6)
+                    latitude: pos.coords.latitude.toFixed(6),
+                    longitude: pos.coords.longitude.toFixed(6),
                 }));
+                setLocationStatus('found');
             },
-            (error) => {
-                console.error("Error getting location:", error);
-                alert("Unable to retrieve your location. Please enter manually or pick from map.");
-            }
+            () => setLocationStatus('error'),
+            { timeout: 8000, enableHighAccuracy: true }
         );
     };
 
@@ -295,57 +323,80 @@ export default function IncidentsPage() {
                                     </select>
                                 </div>
                             </div>
-                            <div className="space-y-4">
-                                <div className="flex items-center justify-between">
-                                    <label className="text-sm font-bold text-slate-400 uppercase tracking-wider">Location</label>
-                                    <button
-                                        type="button"
-                                        onClick={handleLocateMe}
-                                        className="text-xs font-bold text-red-400 hover:text-red-300 flex items-center gap-1.5 px-3 py-1.5 bg-red-400/10 rounded-lg transition-colors"
-                                    >
-                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
-                                        </svg>
-                                        Use My Location
-                                    </button>
-                                </div>
-                                
-                                <div className="grid grid-cols-2 gap-4">
-                                    <input
-                                        type="number"
-                                        step="any"
-                                        value={newIncident.latitude}
-                                        onChange={(e) => setNewIncident({ ...newIncident, latitude: e.target.value })}
-                                        className="w-full px-4 py-3.5 bg-slate-800 border border-slate-600 rounded-xl text-white text-base"
-                                        placeholder="Latitude"
-                                        required
-                                    />
-                                    <input
-                                        type="number"
-                                        step="any"
-                                        value={newIncident.longitude}
-                                        onChange={(e) => setNewIncident({ ...newIncident, longitude: e.target.value })}
-                                        className="w-full px-4 py-3.5 bg-slate-800 border border-slate-600 rounded-xl text-white text-base"
-                                        placeholder="Longitude"
-                                        required
-                                    />
-                                </div>
+                            {/* Location — auto-detected, no manual input */}
+                            <div className="space-y-3">
+                                <label className="text-sm font-bold text-slate-400 uppercase tracking-wider block">Incident Location</label>
 
-                                <div className="relative rounded-xl overflow-hidden border border-slate-700 h-48 bg-slate-800 group cursor-crosshair">
-                                    <LocationPicker 
-                                        value={{ lat: newIncident.latitude, lng: newIncident.longitude }}
-                                        onChange={(lat, lng) => setNewIncident(prev => ({ ...prev, latitude: lat, longitude: lng }))}
-                                    />
-                                    <div className="absolute top-2 right-2 z-[1000] pointer-events-none">
-                                        <div className="bg-slate-900/80 backdrop-blur-md px-2 py-1 rounded text-[10px] font-bold text-slate-400 border border-white/5">
-                                            CLICK TO PICK
+                                {/* Status pill */}
+                                {locationStatus === 'detecting' && (
+                                    <div className="flex items-center gap-3 px-4 py-3 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+                                        <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                                        <div>
+                                            <p className="text-sm font-bold text-blue-300">Detecting your location...</p>
+                                            <p className="text-xs text-slate-500">Please allow location access if prompted</p>
                                         </div>
                                     </div>
-                                </div>
-                                <p className="text-[11px] text-slate-500 font-medium">
-                                    Tip: You can drag the marker or click anywhere on the map to set the incident location.
-                                </p>
+                                )}
+                                {locationStatus === 'found' && (
+                                    <div className="flex items-center justify-between px-4 py-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+                                                <svg className="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+                                                </svg>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-bold text-emerald-300">📍 Location Captured</p>
+                                                <p className="text-xs font-mono text-slate-400">{parseFloat(newIncident.latitude).toFixed(4)}°N, {parseFloat(newIncident.longitude).toFixed(4)}°E</p>
+                                            </div>
+                                        </div>
+                                        <button type="button" onClick={handleRetryLocation} className="text-[11px] text-slate-500 hover:text-white transition-colors underline">Retry</button>
+                                    </div>
+                                )}
+                                {locationStatus === 'fallback' && (
+                                    <div className="flex items-center justify-between px-4 py-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                                                <svg className="w-4 h-4 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-bold text-amber-300">Using estimated location</p>
+                                                <p className="text-xs text-slate-500">GPS denied — you can fine-tune on the map below</p>
+                                            </div>
+                                        </div>
+                                        <button type="button" onClick={handleRetryLocation} className="text-[11px] text-slate-500 hover:text-white transition-colors underline">Retry</button>
+                                    </div>
+                                )}
+                                {locationStatus === 'error' && (
+                                    <div className="flex items-center justify-between px-4 py-3 bg-red-500/10 border border-red-500/20 rounded-xl">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                                                <svg className="w-4 h-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-bold text-red-300">Location unavailable</p>
+                                                <p className="text-xs text-slate-500">Please tap the map below to set location</p>
+                                            </div>
+                                        </div>
+                                        <button type="button" onClick={handleRetryLocation} className="text-[11px] text-slate-500 hover:text-white transition-colors underline">Retry</button>
+                                    </div>
+                                )}
+
+                                {/* Map fine-tuner — shown once we have any coords */}
+                                {(locationStatus === 'found' || locationStatus === 'fallback' || locationStatus === 'error') && (
+                                    <div className="relative rounded-xl overflow-hidden border border-slate-700 h-44 bg-slate-800 cursor-crosshair">
+                                        <LocationPicker
+                                            value={{ lat: newIncident.latitude || 19.2952, lng: newIncident.longitude || 72.8544 }}
+                                            onChange={(lat, lng) => setNewIncident(prev => ({ ...prev, latitude: lat, longitude: lng }))}
+                                        />
+                                        <div className="absolute top-2 right-2 z-[1000] pointer-events-none">
+                                            <div className="bg-slate-900/80 backdrop-blur-md px-2 py-1 rounded text-[10px] font-bold text-slate-400 border border-white/5">
+                                                DRAG TO ADJUST
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                             <div className="flex gap-3 pt-3">
                                 <button
