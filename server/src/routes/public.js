@@ -3,6 +3,27 @@ const { pool } = require('../config/db');
 
 const router = express.Router();
 
+async function reverseGeocode(lat, lng) {
+    try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=16`);
+        if (!res.ok) return null;
+        const data = await res.json();
+        if (data && data.address) {
+            const { road, suburb, neighbourhood, city, town, village } = data.address;
+            const street = road || neighbourhood || suburb;
+            const area = city || town || village || suburb;
+            if (street && area) return `${street}, ${area}`;
+            if (street) return street;
+            if (area) return area;
+        }
+        return data?.display_name?.split(',').slice(0, 2).join(',') || null;
+    } catch (err) {
+        console.error('Reverse geocode error:', err);
+        return null;
+    }
+}
+
+
 /**
  * POST /api/public/incident/report
  * Citizen reports an incident — NO authentication required
@@ -78,7 +99,11 @@ router.post('/congestion/report', async (req, res) => {
         else if (congestion_level === 'moderate') status = 'moderate';
         else status = 'clear';
 
-        const road_segment = `Citizen Report (${parseFloat(latitude).toFixed(3)}, ${parseFloat(longitude).toFixed(3)})`;
+        let road_segment = req.body.road_segment;
+        if (!road_segment) {
+            const geoName = await reverseGeocode(latitude, longitude);
+            road_segment = geoName ? geoName : `Citizen Report (${parseFloat(latitude).toFixed(3)}, ${parseFloat(longitude).toFixed(3)})`;
+        }
 
         const result = await pool.query(
             `INSERT INTO congestion (road_segment, latitude, longitude, vehicle_density, average_speed, status)

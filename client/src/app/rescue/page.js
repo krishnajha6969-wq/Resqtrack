@@ -22,6 +22,7 @@ export default function RescuePage() {
     const [route, setRoute] = useState([]);
     const [congestion, setCongestion] = useState([]);
     const [newMissionAlert, setNewMissionAlert] = useState(false);
+    const [activeIncidents, setActiveIncidents] = useState([]);
 
     const positionRef = useRef(position);
     positionRef.current = position;
@@ -47,9 +48,13 @@ export default function RescuePage() {
                         setPosition({ lat: parseFloat(team.latitude), lng: parseFloat(team.longitude) });
                     }
 
-                    // Find an active incident assigned to this team
-                    const incidents = await api.getIncidents({ status: 'in_progress' });
-                    const assigned = incidents.find(i =>
+                    // Find an active incident assigned to this team, and save all active incidents for the map
+                    const incidents = await api.getIncidents();
+                    
+                    const active = incidents.filter(i => i.status !== 'resolved' && i.status !== 'closed');
+                    setActiveIncidents(active);
+
+                    const assigned = active.find(i =>
                         i.assigned_team_name === team.team_name ||
                         i.assigned_team_id === team.id
                     );
@@ -95,6 +100,17 @@ export default function RescuePage() {
 
         // Live incident updates (e.g. cancellation or status change)
         const handleIncidentUpdate = (incident) => {
+            setActiveIncidents(prev => {
+                const exists = prev.some(i => i.id === incident.id);
+                if (incident.status === 'resolved' || incident.status === 'closed') {
+                    return prev.filter(i => i.id !== incident.id);
+                }
+                if (exists) {
+                    return prev.map(i => i.id === incident.id ? incident : i);
+                }
+                return [...prev, incident];
+            });
+
             setMission(prev => {
                 if (!prev) return prev;
                 if (prev.incident.id === incident.id) {
@@ -108,11 +124,17 @@ export default function RescuePage() {
             });
         };
 
+        const handleNewIncident = (incident) => {
+            setActiveIncidents(prev => [...prev, incident]);
+        };
+
         socket.on('mission:new', handleNewMission);
+        socket.on('incident:new', handleNewIncident);
         socket.on('incident:updated', handleIncidentUpdate);
 
         return () => {
             socket.off('mission:new', handleNewMission);
+            socket.off('incident:new', handleNewIncident);
             socket.off('incident:updated', handleIncidentUpdate);
         };
     }, [myTeam]);
@@ -225,7 +247,15 @@ export default function RescuePage() {
     const teamMarker = myTeam
         ? [{ id: myTeam.id, vehicle_id: myTeam.vehicle_id, team_name: 'You', latitude: position.lat, longitude: position.lng, status: teamStatus }]
         : [];
-    const incidentMarker = mission ? [mission.incident] : [];
+    
+    // Show all active incidents on the map, not just the assigned one
+    const mapIncidents = activeIncidents.map(inc => {
+        // Highlight the assigned mission
+        if (mission && mission.incident.id === inc.id) {
+            return { ...inc, isMissionTarget: true };
+        }
+        return inc;
+    });
 
     // ─── Loading state ─────────────────────────────────────────────────────────
     if (loading) {
@@ -257,7 +287,7 @@ export default function RescuePage() {
                 <div className="flex-1 relative min-h-[400px] lg:min-h-0">
                     <MapView
                         teams={teamMarker}
-                        incidents={incidentMarker}
+                        incidents={mapIncidents}
                         congestion={congestion}
                         route={route}
                         center={[position.lat, position.lng]}
