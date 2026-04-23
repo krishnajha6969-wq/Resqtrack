@@ -4,21 +4,15 @@ import { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import Navbar from '@/components/Navbar';
 import { IncidentCard, StatusBadge } from '@/components/Cards';
+import api from '@/lib/api';
+import { getSocket } from '@/lib/socket';
 
 const MapView = dynamic(() => import('@/components/MapView'), { ssr: false });
 const LocationPicker = dynamic(() => import('@/components/LocationPicker'), { ssr: false });
 
-const INITIAL_INCIDENTS = [
-    { id: '1', title: 'Building Collapse - Near Maxus Mall', latitude: 19.2952, longitude: 72.8544, severity: 'critical', description: 'Old building near Maxus Mall collapsed during heavy rain. Multiple casualties reported. First responders on scene. Need additional rescue teams with heavy equipment.', incident_type: 'structural', status: 'in_progress', assigned_team_name: 'Bravo Medical', reporter_name: 'Mira Road Fire Station', created_at: new Date(Date.now() - 3600000).toISOString(), updated_at: new Date(Date.now() - 1800000).toISOString() },
-    { id: '2', title: 'Flood Water Rising - Uttan Beach', latitude: 19.2820, longitude: 72.7920, severity: 'high', description: 'High tide causing water logging in low-lying coastal areas of Uttan. Over 200 residents need immediate evacuation. Boats requested.', incident_type: 'flood', status: 'reported', assigned_team_name: null, reporter_name: 'Bhayander West Ward', created_at: new Date(Date.now() - 1800000).toISOString(), updated_at: new Date(Date.now() - 1800000).toISOString() },
-    { id: '3', title: 'Road Blocked - WEH Mira Road', latitude: 19.2815, longitude: 72.8680, severity: 'medium', description: 'Tree fell blocking the Western Express Highway near Mira Road station. Both lanes blocked. Alternate routes via Kashimira are congested.', incident_type: 'blockage', status: 'reported', assigned_team_name: null, reporter_name: 'Traffic Police - Mira Road', created_at: new Date(Date.now() - 900000).toISOString(), updated_at: new Date(Date.now() - 900000).toISOString() },
-    { id: '4', title: 'Medical Emergency - GCC Club', latitude: 19.2680, longitude: 72.8590, severity: 'high', description: 'Multiple heatstrokes reported at relief camp near GCC Club, Mira Road. Medical supplies running low. Need ambulance support.', incident_type: 'medical', status: 'in_progress', assigned_team_name: 'Mira Road Ambulance', reporter_name: 'Camp Manager', created_at: new Date(Date.now() - 600000).toISOString(), updated_at: new Date(Date.now() - 300000).toISOString() },
-    { id: '5', title: 'Gas Leak - Kashimira Industrial Area', latitude: 19.3025, longitude: 72.8420, severity: 'critical', description: 'Chemical plant in Kashimira reporting hazardous gas leak. 500m evacuation zone established. HAZMAT team requested urgently.', incident_type: 'hazmat', status: 'reported', assigned_team_name: null, reporter_name: 'Plant Security - Kashimira', created_at: new Date(Date.now() - 300000).toISOString(), updated_at: new Date(Date.now() - 300000).toISOString() },
-    { id: '6', title: 'Trapped Survivors - Bhayander Station', latitude: 19.3042, longitude: 72.8510, severity: 'critical', description: 'Portion of Bhayander railway station foot overbridge collapsed. Signals from trapped survivors detected. Need specialized rescue equipment.', incident_type: 'structural', status: 'reported', assigned_team_name: null, reporter_name: 'Railway Police Bhayander', created_at: new Date(Date.now() - 120000).toISOString(), updated_at: new Date(Date.now() - 120000).toISOString() },
-];
-
 export default function IncidentsPage() {
-    const [incidents, setIncidents] = useState(INITIAL_INCIDENTS);
+    const [incidents, setIncidents] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState({ status: '', severity: '' });
     const [showCreate, setShowCreate] = useState(false);
     const [selectedIncident, setSelectedIncident] = useState(null);
@@ -27,6 +21,44 @@ export default function IncidentsPage() {
         title: '', description: '', severity: 'medium', incident_type: 'general',
         latitude: '', longitude: '',
     });
+
+    // Fetch initial data
+    useEffect(() => {
+        async function fetchIncidents() {
+            setLoading(true);
+            try {
+                const data = await api.getIncidents();
+                setIncidents(data);
+            } catch (err) {
+                console.error("Failed to fetch incidents:", err);
+            } finally {
+                setLoading(false);
+            }
+        }
+        fetchIncidents();
+    }, []);
+
+    // Real-time updates
+    useEffect(() => {
+        const socket = getSocket();
+        
+        const handleNewIncident = (incident) => {
+            setIncidents(prev => [incident, ...prev]);
+        };
+        
+        const handleIncidentUpdate = (incident) => {
+            setIncidents(prev => prev.map(i => i.id === incident.id ? incident : i));
+            setSelectedIncident(prev => prev?.id === incident.id ? incident : prev);
+        };
+
+        socket.on('incident:new', handleNewIncident);
+        socket.on('incident:updated', handleIncidentUpdate);
+
+        return () => {
+            socket.off('incident:new', handleNewIncident);
+            socket.off('incident:updated', handleIncidentUpdate);
+        };
+    }, []);
 
     // Auto-capture location the moment the form is opened
     useEffect(() => {
@@ -64,23 +96,20 @@ export default function IncidentsPage() {
         return true;
     });
 
-    const handleCreate = (e) => {
+    const handleCreate = async (e) => {
         e.preventDefault();
-        const incident = {
-            ...newIncident,
-            id: Date.now().toString(),
-            status: 'reported',
-            assigned_team_name: null,
-            reporter_name: 'You',
-            latitude: parseFloat(newIncident.latitude),
-            longitude: parseFloat(newIncident.longitude),
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-        };
-        setIncidents([incident, ...incidents]);
-        setShowCreate(false);
-        setLocationStatus('idle');
-        setNewIncident({ title: '', description: '', severity: 'medium', incident_type: 'general', latitude: '', longitude: '' });
+        try {
+            await api.createIncident({
+                ...newIncident,
+                latitude: parseFloat(newIncident.latitude),
+                longitude: parseFloat(newIncident.longitude),
+            });
+            setShowCreate(false);
+            setLocationStatus('idle');
+            setNewIncident({ title: '', description: '', severity: 'medium', incident_type: 'general', latitude: '', longitude: '' });
+        } catch (err) {
+            console.error('Failed to create incident:', err);
+        }
     };
 
     const handleRetryLocation = () => {
@@ -100,12 +129,19 @@ export default function IncidentsPage() {
         );
     };
 
-    const handleStatusChange = (id, newStatus) => {
+    const handleStatusChange = async (id, newStatus) => {
+        // Optimistic UI update
         setIncidents(prev => prev.map(i =>
             i.id === id ? { ...i, status: newStatus, updated_at: new Date().toISOString() } : i
         ));
         if (selectedIncident?.id === id) {
             setSelectedIncident(prev => ({ ...prev, status: newStatus }));
+        }
+
+        try {
+            await api.updateIncidentStatus(id, newStatus);
+        } catch (err) {
+            console.error('Failed to update status:', err);
         }
     };
 
@@ -120,7 +156,12 @@ export default function IncidentsPage() {
         <div className="min-h-screen bg-slate-950">
             <Navbar />
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            {loading ? (
+                <div className="flex-1 flex items-center justify-center min-h-[50vh]">
+                    <div className="w-10 h-10 border-4 border-slate-800 border-t-red-500 rounded-full animate-spin" />
+                </div>
+            ) : (
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
                     <div>
@@ -265,6 +306,7 @@ export default function IncidentsPage() {
                     </div>
                 </div>
             </div>
+            )}
 
             {/* Create Incident Modal */}
             {showCreate && (
